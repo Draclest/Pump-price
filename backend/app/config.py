@@ -3,7 +3,7 @@ from typing import Literal
 
 _BASE = (
     "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/"
-    "prix-des-carburants-en-france-flux-instantane-v2"
+    "prix-carburants-quotidien"
 )
 
 
@@ -23,12 +23,14 @@ class Settings(BaseSettings):
     data_gouv_url:         str = f"{_BASE}/exports/json"   # full export
     data_gouv_records_url: str = f"{_BASE}/records"        # filtered records
 
-    # Scheduled full ingestion (cron expression)
-    ingestion_schedule: str = "0 */6 * * *"
+    # Scheduled full ingestion — dataset updated daily at 11h
+    ingestion_schedule: str = "0 11 * * *"
 
     # Background refresh thresholds
-    gov_refresh_hours: int = 6    # re-fetch gov prices if older than N hours
     osm_refresh_days:  int = 7    # re-fetch OSM metadata if older than N days
+
+    # History retention
+    price_history_days: int = 30
 
     model_config = {"env_file": ".env", "case_sensitive": False}
 

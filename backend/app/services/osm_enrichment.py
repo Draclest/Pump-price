@@ -26,9 +26,16 @@ logger = logging.getLogger(__name__)
 _BBOX = (41.3, -5.6, 51.2, 9.7)
 
 OVERPASS_URL     = "https://overpass-api.de/api/interpreter"
-OVERPASS_TIMEOUT = 120
-MATCH_RADIUS_M   = 100
-_GRID_PREC       = 0.01   # degrees ≈ 1 km
+OVERPASS_TIMEOUT = 180   # seconds — France-wide query needs generous time
+MATCH_RADIUS_M   = 150   # metres — slightly wider to catch imprecise coordinates
+_GRID_PREC       = 0.01  # degrees ≈ 1 km
+
+# Mirror used if primary Overpass is slow
+_OVERPASS_MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
 
 
 # ── Spatial helpers ────────────────────────────────────────────────────────────
@@ -86,39 +93,64 @@ def _parse_osm_element(el: dict, fetched_at: str) -> Optional[dict]:
 
 
 async def _run_overpass(query: str, timeout: int = OVERPASS_TIMEOUT) -> list[dict]:
+    """Run an Overpass query, trying mirrors on failure."""
     fetched_at = datetime.now(timezone.utc).isoformat()
-    try:
-        async with httpx.AsyncClient(timeout=float(timeout)) as client:
-            resp = await client.post(OVERPASS_URL, data={"data": query})
-            resp.raise_for_status()
-            data = resp.json()
-    except Exception as exc:
-        logger.warning("Overpass request failed: %s", exc)
-        return []
+    last_exc: Exception | None = None
 
-    result = []
-    for el in data.get("elements", []):
-        parsed = _parse_osm_element(el, fetched_at)
-        if parsed:
-            result.append(parsed)
-    return result
+    for url in _OVERPASS_MIRRORS:
+        try:
+            async with httpx.AsyncClient(timeout=float(timeout + 30)) as client:
+                resp = await client.post(url, data={"data": query})
+                resp.raise_for_status()
+                data = resp.json()
+            result = []
+            for el in data.get("elements", []):
+                parsed = _parse_osm_element(el, fetched_at)
+                if parsed:
+                    result.append(parsed)
+            logger.debug("Overpass OK via %s: %d elements", url, len(result))
+            return result
+        except Exception as exc:
+            logger.warning("Overpass %s failed: %s — trying next mirror", url, exc)
+            last_exc = exc
+
+    logger.error("All Overpass mirrors failed: %s", last_exc)
+    return []
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 async def fetch_all_france() -> list[dict]:
-    """Fetch all fuel stations in France from Overpass API."""
+    """
+    Fetch all fuel stations in France from Overpass API.
+    Splits into north/south halves to avoid query timeout on large datasets.
+    """
     south, west, north, east = _BBOX
-    query = f"""
-[out:json][timeout:{OVERPASS_TIMEOUT - 10}];
-(
-  node["amenity"="fuel"]({south},{west},{north},{east});
-  way["amenity"="fuel"]({south},{west},{north},{east});
-);
-out center tags;
-""".strip()
-    stations = await _run_overpass(query)
-    logger.info("OSM fetch_all_france: %d elements", len(stations))
+    mid = (south + north) / 2  # ≈ 46.25°N
+
+    def _q(s: float, n: float) -> str:
+        return (
+            f"[out:json][timeout:{OVERPASS_TIMEOUT}];"
+            f"(node[\"amenity\"=\"fuel\"]({s},{west},{n},{east});"
+            f"way[\"amenity\"=\"fuel\"]({s},{west},{n},{east}););"
+            "out center tags;"
+        )
+
+    south_task = asyncio.create_task(_run_overpass(_q(south, mid)))
+    north_task = asyncio.create_task(_run_overpass(_q(mid, north)))
+    south_res, north_res = await asyncio.gather(south_task, north_task)
+
+    # Deduplicate by osm_id (shouldn't overlap, but be safe)
+    seen: set[str] = set()
+    stations: list[dict] = []
+    for s in south_res + north_res:
+        key = s["osm_id"]
+        if key not in seen:
+            seen.add(key)
+            stations.append(s)
+
+    logger.info("OSM fetch_all_france: %d elements (south=%d north=%d)",
+                len(stations), len(south_res), len(north_res))
     return stations
 
 

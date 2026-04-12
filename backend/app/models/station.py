@@ -39,6 +39,11 @@ class Station(BaseModel):
     osm_node_id: Optional[str] = None
     osm_node_type: Optional[str] = None   # "node" | "way"
     osm_last_updated: Optional[str] = None
+    # Geographic/administrative
+    region: Optional[str] = None
+    department: Optional[str] = None
+    dep_code: Optional[str] = None
+    reg_code: Optional[str] = None
 
 
 class StationSearchResult(BaseModel):
@@ -64,6 +69,11 @@ class StationSearchResult(BaseModel):
     osm_node_id: Optional[str] = None
     osm_node_type: Optional[str] = None
     osm_last_updated: Optional[str] = None
+    # Geographic/administrative
+    region: Optional[str] = None
+    department: Optional[str] = None
+    dep_code: Optional[str] = None
+    reg_code: Optional[str] = None
     # Search result
     distance_meters: Optional[float] = None
 

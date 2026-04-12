@@ -42,6 +42,10 @@ def _to_result(src: dict, distance: float | None = None) -> StationSearchResult:
         osm_node_id=src.get("osm_node_id"),
         osm_node_type=src.get("osm_node_type"),
         osm_last_updated=src.get("osm_last_updated"),
+        region=src.get("region"),
+        department=src.get("department"),
+        dep_code=src.get("dep_code"),
+        reg_code=src.get("reg_code"),
         distance_meters=distance,
     )
 

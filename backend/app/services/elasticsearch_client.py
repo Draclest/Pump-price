@@ -5,6 +5,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 INDEX_NAME = "fuel-stations"
+HISTORY_INDEX = "fuel-price-history"
 
 STATION_MAPPING = {
     "mappings": {
@@ -42,6 +43,31 @@ STATION_MAPPING = {
             "osm_node_type":   {"type": "keyword"},
             "osm_last_updated":{"type": "date"},
             "ingested_at":     {"type": "date"},
+            # Geographic/administrative fields
+            "region":          {"type": "keyword"},
+            "department":      {"type": "keyword"},
+            "dep_code":        {"type": "keyword"},
+            "reg_code":        {"type": "keyword"},
+        }
+    },
+    "settings": {
+        "number_of_shards":   1,
+        "number_of_replicas": 0,
+    },
+}
+
+
+HISTORY_MAPPING = {
+    "mappings": {
+        "properties": {
+            "station_id":  {"type": "keyword"},
+            "fuel_type":   {"type": "keyword"},
+            "price":       {"type": "float"},
+            "recorded_at": {"type": "date", "format": "yyyy-MM-dd"},
+            "city":        {"type": "keyword"},
+            "postal_code": {"type": "keyword"},
+            "dep_code":    {"type": "keyword"},
+            "reg_code":    {"type": "keyword"},
         }
     },
     "settings": {
@@ -74,3 +100,19 @@ async def ensure_index(es: AsyncElasticsearch) -> None:
             logger.info("Updated mapping for index: %s", INDEX_NAME)
         except Exception as exc:
             logger.warning("Could not update mapping (non-fatal): %s", exc)
+
+
+async def ensure_history_index(es: AsyncElasticsearch) -> None:
+    exists = await es.indices.exists(index=HISTORY_INDEX)
+    if not exists:
+        await es.indices.create(index=HISTORY_INDEX, body=HISTORY_MAPPING)
+        logger.info("Created index: %s", HISTORY_INDEX)
+    else:
+        try:
+            await es.indices.put_mapping(
+                index=HISTORY_INDEX,
+                body=HISTORY_MAPPING["mappings"],
+            )
+            logger.info("Updated mapping for index: %s", HISTORY_INDEX)
+        except Exception as exc:
+            logger.warning("Could not update history mapping (non-fatal): %s", exc)
