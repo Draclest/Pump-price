@@ -359,6 +359,7 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
   @Input() selectedStation: Station | null = null;
   @Input() highlightFuel = 'SP95';
   @Input() top3Ids: string[] = [];
+  @Input() routeCoords: [number, number][] | null = null;  // [lon, lat] pairs
   @Output() stationSelected = new EventEmitter<Station | null>();
   @Output() historyRequested = new EventEmitter<Station>();
 
@@ -368,6 +369,7 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
   private markers = new L.LayerGroup();
   private markerMap = new Map<string, L.Marker>();
   private userMarker: L.Marker | null = null;
+  private routePolyline: L.Polyline | null = null;
   private previousSelectedId: string | null = null;
   private initialized = false;
 
@@ -388,6 +390,7 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
     if (changes['stations'] || changes['top3Ids']) this.rebuildAllMarkers();
     if (changes['selectedStation'] && !changes['stations'] && !changes['top3Ids']) this.updateSelectionMarkers();
     if (changes['highlightFuel'] && !changes['stations'] && !changes['top3Ids']) this.rebuildAllMarkers();
+    if (changes['routeCoords']) this.updateRoutePolyline();
   }
 
   private initMap(): void {
@@ -511,6 +514,24 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
     img.style.display = 'none';
     const letter = img.parentElement?.querySelector('.panel-logo-letter') as HTMLElement | null;
     if (letter) letter.style.display = 'block';
+  }
+
+  private updateRoutePolyline(): void {
+    if (this.routePolyline) {
+      this.routePolyline.remove();
+      this.routePolyline = null;
+    }
+    if (this.routeCoords && this.routeCoords.length > 1) {
+      // Convert [lon, lat] to Leaflet [lat, lon]
+      const latLngs: L.LatLngExpression[] = this.routeCoords.map(([lon, lat]) => [lat, lon]);
+      this.routePolyline = L.polyline(latLngs, {
+        color: '#3b82f6',
+        weight: 5,
+        opacity: 0.8,
+      }).addTo(this.map);
+      this.map.invalidateSize();
+      this.map.fitBounds(this.routePolyline.getBounds(), { padding: [32, 32] });
+    }
   }
 
   onOpenRoute(): void {

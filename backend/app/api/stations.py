@@ -1,12 +1,14 @@
 import asyncio
 import logging
+import math
 from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from elasticsearch import AsyncElasticsearch
 
 from app.models.station import StationSearchResult, SearchParams
 from app.services import station_service
-from app.services.scoring_service import score_stations
+from app.services.scoring_service import score_stations, score_stations_route
+from app.services.routing_service import get_route, filter_stations_near_route
 from app.api.deps import get_es
 from app.workers.refresh import schedule_refresh
 
@@ -129,6 +131,96 @@ async def recommend_stations(
         background_tasks.add_task(schedule_refresh, es, output)
 
     return output
+
+
+@router.post("/route-recommend", response_model=None)
+async def route_recommend(
+    background_tasks: BackgroundTasks,
+    origin_lat:    float           = Query(...),
+    origin_lon:    float           = Query(...),
+    dest_lat:      float           = Query(...),
+    dest_lon:      float           = Query(...),
+    fuel_type:     str | None      = Query(default=None),
+    max_price:     float | None    = Query(default=None),
+    max_detour_km: float           = Query(default=5.0, ge=0.1, le=50.0),
+    services:      list[str]       = Query(default=[]),
+    limit:         int             = Query(default=20, ge=1, le=100),
+    es: AsyncElasticsearch = Depends(get_es),
+):
+    """
+    1. Get route geometry from OSRM
+    2. Search stations in bounding box of route
+    3. Filter stations near route
+    4. Apply service filters
+    5. Score with score_stations_route
+    6. Return {route: ..., stations: top `limit` scored}
+    """
+    # 1. Get route
+    try:
+        route = await get_route(origin_lat, origin_lon, dest_lat, dest_lon)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Routing failed: {exc}") from exc
+
+    # 2. Search stations — use midpoint + radius covering whole route
+    mid_lat = (origin_lat + dest_lat) / 2
+    mid_lon = (origin_lon + dest_lon) / 2
+    haversine_half = math.sqrt(
+        ((origin_lat - dest_lat) * 111.0) ** 2
+        + ((origin_lon - dest_lon) * 111.0 * math.cos(math.radians(mid_lat))) ** 2
+    ) / 2
+    search_radius = haversine_half + max_detour_km + 10.0
+    search_radius = min(search_radius, 300.0)  # cap for ES
+
+    params = SearchParams(
+        lat=mid_lat,
+        lon=mid_lon,
+        radius_km=search_radius,
+        fuel_type=fuel_type,
+        max_price=max_price,
+        limit=500,
+    )
+    results = await station_service.search_stations(es, params)
+
+    # 3. Filter near route
+    station_dicts = [r.model_dump() for r in results]
+    near = filter_stations_near_route(
+        station_dicts,
+        route["coordinates"],
+        max_detour_km=max_detour_km,
+    )
+
+    # 4. Apply services filter
+    if services:
+        filtered = []
+        for st in near:
+            st_services = st.get("services") or []
+            if all(any(req.lower() in svc.lower() for svc in st_services) for req in services):
+                filtered.append(st)
+        near = filtered
+
+    # 5. Score
+    fuel_types: list[str] = [fuel_type] if fuel_type else ["E10", "SP95", "SP98", "E85", "GPLc", "Gazole"]
+    route_distance_km = route["distance_m"] / 1000.0
+    scored = score_stations_route(
+        stations=near,
+        fuel_types=fuel_types,
+        route_distance_km=route_distance_km,
+    )
+
+    # Map internal keys
+    output = []
+    for s in scored[:limit]:
+        s["score"] = s.pop("_score", None)
+        s["score_breakdown"] = s.pop("_score_breakdown", None)
+        s["recommendation_label"] = s.pop("_recommendation_label", None)
+        s["matched_fuel"] = s.pop("_matched_fuel", None)
+        output.append(s)
+
+    # Background refresh
+    if output:
+        background_tasks.add_task(schedule_refresh, es, output)
+
+    return {"route": route, "stations": output}
 
 
 @router.get("/{station_id}", response_model=StationSearchResult)

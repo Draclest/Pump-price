@@ -53,6 +53,12 @@ export interface Station {
   score_breakdown?: { price: number; distance: number; freshness: number; services: number };
   recommendation_label?: string;
   matched_fuel?: { type: string; price: number; updated_at: string };
+  _route_info?: {
+    perp_dist_km: number;
+    detour_km: number;
+    nearest_idx: number;
+    progress_pct: number;
+  };
 }
 
 export interface SearchParams {

@@ -225,3 +225,125 @@ def score_stations(
         e.pop("_services_raw", None)
 
     return enriched
+
+
+def score_stations_route(
+    stations: list[dict],   # already have _route_info from routing_service
+    fuel_types: list[str],
+    route_distance_km: float,
+) -> list[dict]:
+    """
+    Scoring weights for route mode:
+      price   35%
+      detour  35%  (lower detour → higher score, normalized against max_detour in set)
+      freshness 15%
+      services  15%
+
+    Labels for top 3:
+    - Rank 1: "Meilleur prix sur le trajet"
+    - Rank 2: if detour_score highest → "Sans détour", if price_score highest → "Moins cher"
+    - Rank 3: "Bon compromis prix / détour"
+
+    Enriches each station with _score, _score_breakdown, _recommendation_label, _matched_fuel.
+    Returns sorted by _score descending.
+    """
+    if not stations:
+        return []
+
+    WEIGHT_PRICE     = 0.35
+    WEIGHT_DETOUR    = 0.35
+    WEIGHT_FRESHNESS = 0.15
+    WEIGHT_SERVICES  = 0.15
+
+    enriched: list[dict] = []
+    for st in stations:
+        matched = _best_fuel(st, fuel_types)
+        freshness = 0.0
+        price_raw: Optional[float] = None
+        if matched:
+            freshness = _freshness_score(matched.get("updated_at"))
+            price_raw = matched.get("price")
+
+        services_raw = _services_score(st)
+        route_info = st.get("_route_info", {}) or {}
+        detour_km = route_info.get("detour_km", 0.0)
+
+        enriched.append({
+            **st,
+            "_price_raw": price_raw,
+            "_freshness_raw": freshness,
+            "_services_raw": services_raw,
+            "_detour_raw": detour_km,
+            "_matched_fuel": matched,
+        })
+
+    # Normalize price
+    prices = [e["_price_raw"] for e in enriched if e["_price_raw"] is not None]
+    min_price = min(prices) if prices else None
+    max_price = max(prices) if prices else None
+
+    # Normalize detour
+    detours = [e["_detour_raw"] for e in enriched]
+    max_detour = max(detours) if detours else 1.0
+    if max_detour == 0:
+        max_detour = 1.0
+
+    for e in enriched:
+        # Price score — lower is better
+        if e["_price_raw"] is not None and min_price is not None and max_price is not None:
+            if max_price == min_price:
+                price_score = 100.0
+            else:
+                price_score = (1.0 - (e["_price_raw"] - min_price) / (max_price - min_price)) * 100.0
+        else:
+            price_score = 0.0
+
+        # Detour score — lower detour is better
+        detour_score = max(0.0, (1.0 - e["_detour_raw"] / max_detour)) * 100.0
+
+        freshness_score = e["_freshness_raw"] * 100.0
+        services_score  = e["_services_raw"]  * 100.0
+
+        total = (
+            WEIGHT_PRICE     * price_score
+            + WEIGHT_DETOUR    * detour_score
+            + WEIGHT_FRESHNESS * freshness_score
+            + WEIGHT_SERVICES  * services_score
+        )
+
+        e["_score"] = round(total, 1)
+        e["_score_breakdown"] = {
+            "price":     round(price_score, 1),
+            "detour":    round(detour_score, 1),
+            "freshness": round(freshness_score, 1),
+            "services":  round(services_score, 1),
+        }
+
+    enriched.sort(key=lambda e: e["_score"], reverse=True)
+
+    # Assign recommendation labels to top 3
+    for i, e in enumerate(enriched[:3]):
+        bd = e["_score_breakdown"]
+        if i == 0:
+            label = "Meilleur prix sur le trajet"
+        elif i == 1:
+            max_component = max(("detour", "price"), key=lambda k: bd.get(k, 0))
+            if max_component == "detour":
+                label = "Sans détour"
+            else:
+                label = "Moins cher"
+        else:  # i == 2
+            label = "Bon compromis prix / détour"
+        e["_recommendation_label"] = label
+
+    for e in enriched[3:]:
+        e["_recommendation_label"] = None
+
+    # Clean up internal keys
+    for e in enriched:
+        e.pop("_price_raw", None)
+        e.pop("_freshness_raw", None)
+        e.pop("_services_raw", None)
+        e.pop("_detour_raw", None)
+
+    return enriched

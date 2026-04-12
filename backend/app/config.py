@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # Scheduled full ingestion — dataset updated daily at 11h
     ingestion_schedule: str = "0 11 * * *"
 
+    # OSRM routing
+    osrm_url: str = "https://router.project-osrm.org"
+
     # Background refresh thresholds
     osm_refresh_days:  int = 7    # re-fetch OSM metadata if older than N days
 

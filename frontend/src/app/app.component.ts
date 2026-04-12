@@ -7,8 +7,10 @@ import { FiltersComponent } from './components/filters/filters.component';
 import { StationCardComponent } from './components/station-card/station-card.component';
 import { AddressSearchComponent } from './components/address-search/address-search.component';
 import { PriceHistoryComponent } from './components/price-history/price-history.component';
+import { RoutePanelComponent, RouteRequest } from './components/route-panel/route-panel.component';
 import { StationService } from './services/station.service';
 import { GeolocationService } from './services/geolocation.service';
+import { RoutingService, RouteGeometry } from './services/routing.service';
 import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
 
 @Component({
@@ -17,7 +19,7 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
   imports: [
     CommonModule,
     MapComponent, FiltersComponent, StationCardComponent,
-    AddressSearchComponent, PriceHistoryComponent,
+    AddressSearchComponent, PriceHistoryComponent, RoutePanelComponent,
   ],
   template: `
     <div class="app-shell">
@@ -66,105 +68,216 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
           </button>
         </div>
 
-        <!-- Address search -->
-        <div class="sidebar-search">
-          <app-address-search (locationSelected)="onAddressSelected($event)"></app-address-search>
+        <!-- Mode tabs -->
+        <div class="mode-tabs">
+          <button class="mode-tab" [class.mode-tab--active]="mode() === 'nearby'" (click)="mode.set('nearby')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            À proximité
+          </button>
+          <button class="mode-tab" [class.mode-tab--active]="mode() === 'route'" (click)="mode.set('route')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+              <path d="M3 3h7l7 9-7 9H3l7-9z"/>
+            </svg>
+            Itinéraire
+          </button>
         </div>
 
-        <!-- Filters inline -->
-        <div class="sidebar-filters">
-          <div class="sidebar-section-title">Filtres</div>
-          <app-filters
-            [values]="filters()"
-            [drawerMode]="false"
-            (changed)="onFiltersChanged($event)"
-          ></app-filters>
-        </div>
+        <!-- NEARBY MODE -->
+        <ng-container *ngIf="mode() === 'nearby'">
+          <!-- Address search -->
+          <div class="sidebar-search">
+            <app-address-search (locationSelected)="onAddressSelected($event)"></app-address-search>
+          </div>
 
-        <!-- Error -->
-        <div class="sidebar-error" role="alert" *ngIf="error()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          {{ error() }}
-        </div>
+          <!-- Filters inline -->
+          <div class="sidebar-filters">
+            <div class="sidebar-section-title">Filtres</div>
+            <app-filters
+              [values]="filters()"
+              [drawerMode]="false"
+              (changed)="onFiltersChanged($event)"
+            ></app-filters>
+          </div>
 
-        <!-- Loading state -->
-        <ng-container *ngIf="loading()">
-          <div class="sidebar-section-title">Chargement…</div>
-          <div class="skeleton-card" *ngFor="let i of [1,2,3]">
-            <div class="sk-line sk-line--title"></div>
-            <div class="sk-line sk-line--sub"></div>
-            <div class="sk-badges">
-              <div class="sk-badge" *ngFor="let j of [1,2,3]"></div>
+          <!-- Error -->
+          <div class="sidebar-error" role="alert" *ngIf="error()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            {{ error() }}
+          </div>
+
+          <!-- Loading state -->
+          <ng-container *ngIf="loading()">
+            <div class="sidebar-section-title">Chargement…</div>
+            <div class="skeleton-card" *ngFor="let i of [1,2,3]">
+              <div class="sk-line sk-line--title"></div>
+              <div class="sk-line sk-line--sub"></div>
+              <div class="sk-badges">
+                <div class="sk-badge" *ngFor="let j of [1,2,3]"></div>
+              </div>
             </div>
+          </ng-container>
+
+          <!-- Results -->
+          <ng-container *ngIf="!loading() && userLocation()">
+
+            <!-- No results -->
+            <div class="sidebar-empty" *ngIf="displayedStations().length === 0">
+              Aucune station trouvée
+            </div>
+
+            <!-- Top 3 -->
+            <ng-container *ngIf="top3().length > 0">
+              <div class="sidebar-section-title sidebar-section-title--top3">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" aria-hidden="true">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                Top 3
+              </div>
+              <app-station-card
+                *ngFor="let s of top3(); trackBy: trackById"
+                [station]="s"
+                [selected]="selectedStation()?.id === s.id"
+                [highlightFuel]="filters().fuelType"
+                (select)="onStationSelected($event)"
+                (historyRequested)="historyStation.set($event)"
+              ></app-station-card>
+            </ng-container>
+
+            <!-- Other stations -->
+            <ng-container *ngIf="otherStations().length > 0">
+              <div class="sidebar-section-title">
+                Autres stations
+                <span class="section-count">{{ otherStations().length }}</span>
+              </div>
+              <app-station-card
+                *ngFor="let s of otherStations(); trackBy: trackById"
+                [station]="s"
+                [selected]="selectedStation()?.id === s.id"
+                [highlightFuel]="filters().fuelType"
+                (select)="onStationSelected($event)"
+                (historyRequested)="historyStation.set($event)"
+              ></app-station-card>
+            </ng-container>
+
+          </ng-container>
+
+          <!-- Pre-location hint -->
+          <div class="sidebar-hint" *ngIf="!loading() && !userLocation()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+            </svg>
+            <span>Localisez-vous ou entrez une adresse pour voir les stations</span>
           </div>
         </ng-container>
 
-        <!-- Results -->
-        <ng-container *ngIf="!loading() && userLocation()">
-
-          <!-- No results -->
-          <div class="sidebar-empty" *ngIf="displayedStations().length === 0">
-            Aucune station trouvée
+        <!-- ROUTE MODE -->
+        <ng-container *ngIf="mode() === 'route'">
+          <div class="sidebar-search">
+            <app-route-panel
+              (routeRequested)="onRouteRequested($event)"
+              (routeCleared)="onRouteCleared()"
+            ></app-route-panel>
           </div>
 
-          <!-- Top 3 -->
-          <ng-container *ngIf="top3().length > 0">
+          <!-- Route error -->
+          <div class="sidebar-error" role="alert" *ngIf="routeError()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            {{ routeError() }}
+          </div>
+
+          <!-- Route loading -->
+          <ng-container *ngIf="routeLoading()">
+            <div class="sidebar-section-title">Calcul en cours…</div>
+            <div class="skeleton-card" *ngFor="let i of [1,2,3]">
+              <div class="sk-line sk-line--title"></div>
+              <div class="sk-line sk-line--sub"></div>
+              <div class="sk-badges">
+                <div class="sk-badge" *ngFor="let j of [1,2,3]"></div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Route results -->
+          <ng-container *ngIf="!routeLoading() && routeData()">
             <div class="sidebar-section-title sidebar-section-title--top3">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" aria-hidden="true">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
-              Top 3
+              Top stations sur le trajet
             </div>
+
+            <div class="sidebar-empty" *ngIf="routeStations().length === 0">
+              Aucune station sur cet itinéraire
+            </div>
+
             <app-station-card
-              *ngFor="let s of top3(); trackBy: trackById"
+              *ngFor="let s of routeTop3(); trackBy: trackById"
               [station]="s"
               [selected]="selectedStation()?.id === s.id"
               [highlightFuel]="filters().fuelType"
+              [routeMode]="true"
+              [originLat]="routeOrigin()?.lat"
+              [originLon]="routeOrigin()?.lon"
+              [destLat]="routeDest()?.lat"
+              [destLon]="routeDest()?.lon"
               (select)="onStationSelected($event)"
               (historyRequested)="historyStation.set($event)"
+              (exportToMaps)="openGoogleMaps(s)"
             ></app-station-card>
+
+            <ng-container *ngIf="routeOtherStations().length > 0">
+              <div class="sidebar-section-title">
+                Autres stations sur le trajet
+                <span class="section-count">{{ routeOtherStations().length }}</span>
+              </div>
+              <app-station-card
+                *ngFor="let s of routeOtherStations(); trackBy: trackById"
+                [station]="s"
+                [selected]="selectedStation()?.id === s.id"
+                [highlightFuel]="filters().fuelType"
+                [routeMode]="true"
+                [originLat]="routeOrigin()?.lat"
+                [originLon]="routeOrigin()?.lon"
+                [destLat]="routeDest()?.lat"
+                [destLon]="routeDest()?.lon"
+                (select)="onStationSelected($event)"
+                (historyRequested)="historyStation.set($event)"
+                (exportToMaps)="openGoogleMaps(s)"
+              ></app-station-card>
+            </ng-container>
           </ng-container>
 
-          <!-- Other stations -->
-          <ng-container *ngIf="otherStations().length > 0">
-            <div class="sidebar-section-title">
-              Autres stations
-              <span class="section-count">{{ otherStations().length }}</span>
-            </div>
-            <app-station-card
-              *ngFor="let s of otherStations(); trackBy: trackById"
-              [station]="s"
-              [selected]="selectedStation()?.id === s.id"
-              [highlightFuel]="filters().fuelType"
-              (select)="onStationSelected($event)"
-              (historyRequested)="historyStation.set($event)"
-            ></app-station-card>
-          </ng-container>
-
+          <!-- Hint when no route yet -->
+          <div class="sidebar-hint" *ngIf="!routeLoading() && !routeData()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M3 3h7l7 9-7 9H3l7-9z"/>
+            </svg>
+            <span>Entrez un départ et une destination pour trouver des stations sur votre route</span>
+          </div>
         </ng-container>
-
-        <!-- Pre-location hint -->
-        <div class="sidebar-hint" *ngIf="!loading() && !userLocation()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
-          </svg>
-          <span>Localisez-vous ou entrez une adresse pour voir les stations</span>
-        </div>
 
       </aside>
 
       <!-- ── Map area ── -->
       <div class="map-area">
         <app-map
-          [stations]="displayedStations()"
+          [stations]="mapStations()"
           [userLocation]="userLocation()"
           [selectedStation]="selectedStation()"
           [highlightFuel]="filters().fuelType"
           [top3Ids]="top3Ids()"
+          [routeCoords]="routeCoords()"
           (stationSelected)="onStationSelected($event)"
           (historyRequested)="historyStation.set($event)"
         ></app-map>
@@ -214,6 +327,36 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
       overflow-y: auto;
       overflow-x: hidden;
       gap: var(--space-1);
+    }
+
+    /* ── Mode Tabs ── */
+    .mode-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: none;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      font-size: var(--font-size-sm);
+      font-family: var(--font-family);
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-bottom: 2px solid transparent;
+    }
+
+    .mode-tab--active {
+      color: var(--color-primary);
+      border-bottom: 2px solid var(--color-primary);
     }
 
     /* ── Sidebar Header ── */
@@ -500,7 +643,12 @@ export class AppComponent {
   readonly fuelLabels = FUEL_LABELS;
   private stationService = inject(StationService);
   private geolocationService = inject(GeolocationService);
+  private routingService = inject(RoutingService);
 
+  // Mode
+  mode = signal<'nearby' | 'route'>('nearby');
+
+  // Nearby mode
   userLocation  = signal<{ lat: number; lon: number } | null>(null);
   locationLabel = signal<string | null>(null);
   selectedStation = signal<Station | null>(null);
@@ -514,10 +662,29 @@ export class AppComponent {
   private _allStations = signal<Station[]>([]);
 
   displayedStations = computed(() => this._allStations());
-
   top3 = computed(() => this.displayedStations().slice(0, 3));
   otherStations = computed(() => this.displayedStations().slice(3));
   top3Ids = computed(() => this.top3().map(s => s.id));
+
+  // Route mode
+  routeData    = signal<{ route: RouteGeometry; stations: Station[] } | null>(null);
+  routeOrigin  = signal<{ lat: number; lon: number; label: string } | null>(null);
+  routeDest    = signal<{ lat: number; lon: number; label: string } | null>(null);
+  routeLoading = signal(false);
+  routeError   = signal<string | null>(null);
+
+  routeStations   = computed(() => this.routeData()?.stations ?? []);
+  routeTop3        = computed(() => this.routeStations().slice(0, 3));
+  routeOtherStations = computed(() => this.routeStations().slice(3));
+
+  routeCoords = computed<[number, number][] | null>(() =>
+    (this.routeData()?.route?.coordinates as [number, number][] | undefined) ?? null
+  );
+
+  // Map shows route stations in route mode, otherwise nearby stations
+  mapStations = computed(() =>
+    this.mode() === 'route' ? this.routeStations() : this.displayedStations()
+  );
 
   trackById(_: number, s: Station): string { return s.id; }
 
@@ -580,5 +747,61 @@ export class AppComponent {
   onStationSelected(station: Station | null): void {
     this.selectedStation.set(station);
     if (station) this.sidebarOpen.set(false);
+  }
+
+  onRouteRequested(req: RouteRequest): void {
+    if (req.originLat == null || req.originLon == null || req.destLat == null || req.destLon == null) {
+      this.routeError.set('Impossible de géocoder les adresses.');
+      return;
+    }
+    this.routeLoading.set(true);
+    this.routeError.set(null);
+    this.routeData.set(null);
+    this.routeOrigin.set({ lat: req.originLat, lon: req.originLon, label: req.origin });
+    this.routeDest.set({ lat: req.destLat, lon: req.destLon, label: req.destination });
+
+    const f = this.filters();
+    this.routingService.getRouteRecommendations({
+      originLat: req.originLat,
+      originLon: req.originLon,
+      destLat: req.destLat,
+      destLon: req.destLon,
+      fuelType: f.fuelType !== 'Tous' ? f.fuelType : undefined,
+      maxPrice: f.maxPrice,
+      maxDetourKm: req.maxDetourKm,
+      services: f.services,
+    }).subscribe({
+      next: (data) => {
+        this.routeData.set(data);
+        this.routeLoading.set(false);
+        this.sidebarOpen.set(true);
+      },
+      error: (err) => {
+        this.routeError.set('Erreur itinéraire : ' + (err.message ?? err.status));
+        this.routeLoading.set(false);
+      },
+    });
+  }
+
+  onRouteCleared(): void {
+    this.routeData.set(null);
+    this.routeOrigin.set(null);
+    this.routeDest.set(null);
+    this.routeError.set(null);
+  }
+
+  openGoogleMaps(station: Station): void {
+    const origin = this.routeOrigin();
+    const dest   = this.routeDest();
+    if (!origin || !dest) return;
+    const url = this.routingService.exportToGoogleMaps({
+      originLat: origin.lat,
+      originLon: origin.lon,
+      destLat: dest.lat,
+      destLon: dest.lon,
+      waypointLat: station.location.lat,
+      waypointLon: station.location.lon,
+    });
+    window.open(url, '_blank');
   }
 }

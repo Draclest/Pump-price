@@ -134,6 +134,17 @@ import { openRoute } from '../../utils/navigation.util';
         MAJ OSM&nbsp;: {{ formatOsmDate(station.osm_last_updated) }}
       </div>
 
+      <!-- Detour info (route mode) -->
+      <div class="card-detour" *ngIf="routeMode && station._route_info"
+           [class.card-detour--far]="station._route_info.detour_km > 2"
+           [class.card-detour--near]="station._route_info.detour_km <= 2">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        {{ station._route_info.detour_km.toFixed(1) }} km de détour
+      </div>
+
       <!-- Actions -->
       <div class="card-actions" (click)="$event.stopPropagation()">
         <button
@@ -159,6 +170,19 @@ import { openRoute } from '../../utils/navigation.util';
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
           </svg>
           Historique
+        </button>
+      </div>
+
+      <!-- Via Google Maps (route mode) -->
+      <div class="card-gmaps" *ngIf="routeMode" (click)="$event.stopPropagation()">
+        <button class="btn-card btn-card--gmaps" (click)="exportToMaps.emit()" type="button">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          Via Google Maps
         </button>
       </div>
     </div>
@@ -469,14 +493,47 @@ import { openRoute } from '../../utils/navigation.util';
       border: 1.5px solid var(--color-primary-muted);
     }
     .btn-card--history:active { background: var(--color-primary-muted); }
+
+    /* Detour info */
+    .card-detour {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      border-radius: var(--radius-pill);
+      padding: 3px 8px;
+      margin-bottom: var(--space-2);
+    }
+    .card-detour--near { color: #15803d; background: #dcfce7; }
+    .card-detour--far  { color: #c2410c; background: #ffedd5; }
+
+    /* Google Maps button */
+    .card-gmaps {
+      margin-top: var(--space-1);
+    }
+
+    .btn-card--gmaps {
+      width: 100%;
+      background: #f0f9ff;
+      color: #0369a1;
+      border: 1.5px solid #bae6fd;
+    }
+    .btn-card--gmaps:active { background: #bae6fd; }
   `]
 })
 export class StationCardComponent {
   @Input() station!: Station;
   @Input() selected = false;
   @Input() highlightFuel = 'SP95';
+  @Input() routeMode = false;
+  @Input() originLat?: number;
+  @Input() originLon?: number;
+  @Input() destLat?: number;
+  @Input() destLon?: number;
   @Output() select = new EventEmitter<Station>();
   @Output() historyRequested = new EventEmitter<Station>();
+  @Output() exportToMaps = new EventEmitter<void>();
 
   fuelLabels = FUEL_LABELS;
 
