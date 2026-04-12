@@ -9,16 +9,24 @@ export interface FuelPrice {
   updated_at: string;
 }
 
-export const FUEL_TYPES = ['SP95', 'SP98', 'E10', 'E85', 'GPLc', 'Gazole'] as const;
+export const FUEL_TYPES = ['E10', 'SP98', 'E85', 'GPLc', 'Gazole'] as const;
 export type FuelType = (typeof FUEL_TYPES)[number];
+export type FuelTypeOrAll = FuelType | 'Tous';
 
 export const FUEL_LABELS: Record<string, string> = {
-  SP95:   'SP95',
+  Tous:   'Tous',
+  E10:    'Sans-plomb (E10 / SP95)',
   SP98:   'SP98',
-  E10:    'E10',
   E85:    'E85',
   GPLc:   'GPL',
   Gazole: 'Diesel',
+};
+
+/** Availability note shown in the filter UI */
+export const FUEL_NOTES: Partial<Record<FuelTypeOrAll, string>> = {
+  E10:  'Inclut les stations SP95 et E10',
+  E85:  'Véhicules flex-fuel uniquement',
+  GPLc: 'Véhicules GPL uniquement',
 };
 
 export interface Station {

@@ -64,16 +64,23 @@ async def search_stations(
     ]
 
     if params.fuel_type:
-        fuel_filter: dict = {"term": {"fuels.type": params.fuel_type}}
+        # E10 also matches SP95 (same pump category — 95-octane unleaded)
+        fuel_types = (
+            ["E10", "SP95"] if params.fuel_type == "E10" else [params.fuel_type]
+        )
+
         if params.max_price:
-            fuel_filter = {
+            fuel_filter: dict = {
                 "bool": {
                     "must": [
-                        {"term":  {"fuels.type":  params.fuel_type}},
+                        {"terms": {"fuels.type": fuel_types}},
                         {"range": {"fuels.price": {"lte": params.max_price}}},
                     ]
                 }
             }
+        else:
+            fuel_filter = {"terms": {"fuels.type": fuel_types}}
+
         filter_clauses.append({"nested": {"path": "fuels", "query": fuel_filter}})
 
     query = {
@@ -108,7 +115,10 @@ async def search_stations(
         distance = hit.get("sort", [None])[0]
         result = _to_result(src, distance)
         if params.fuel_type:
-            result.fuels = [f for f in result.fuels if f.type == params.fuel_type]
+            keep = (
+                {"E10", "SP95"} if params.fuel_type == "E10" else {params.fuel_type}
+            )
+            result.fuels = [f for f in result.fuels if f.type in keep]
         results.append(result)
 
     return results

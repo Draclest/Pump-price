@@ -1,10 +1,10 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { FUEL_TYPES, FUEL_LABELS, FuelType } from '../../models/station.model';
+import { FUEL_TYPES, FUEL_LABELS, FUEL_NOTES, FuelTypeOrAll } from '../../models/station.model';
 
 export interface FilterValues {
-  fuelType: FuelType;
+  fuelType: FuelTypeOrAll;
   radiusKm: number;
   maxPrice: number | null;
 }
@@ -37,7 +37,7 @@ export interface FilterValues {
           <label class="section-label">Type de carburant</label>
           <div class="chip-group" role="group" aria-label="Type de carburant">
             <button
-              *ngFor="let fuel of fuelTypes"
+              *ngFor="let fuel of allFuelOptions"
               class="chip"
               [class.chip--active]="values.fuelType === fuel"
               (click)="selectFuel(fuel)"
@@ -45,6 +45,7 @@ export interface FilterValues {
               type="button"
             >{{ fuelLabels[fuel] }}</button>
           </div>
+          <p *ngIf="currentFuelNote" class="fuel-note">{{ currentFuelNote }}</p>
         </div>
 
         <!-- Radius -->
@@ -378,17 +379,33 @@ export interface FilterValues {
       -webkit-tap-highlight-color: transparent;
     }
     .btn-apply:active { background: var(--color-primary-dark); }
+
+    .fuel-note {
+      margin: 8px 0 0;
+      font-size: 11px;
+      color: var(--color-text-muted);
+      line-height: 1.4;
+      padding: 6px 8px;
+      background: var(--color-bg);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--color-primary-light);
+    }
   `]
 })
 export class FiltersComponent {
-  @Input() values: FilterValues = { fuelType: 'SP95', radiusKm: 10, maxPrice: null };
+  @Input() values: FilterValues = { fuelType: 'E10', radiusKm: 10, maxPrice: null };
   @Output() changed = new EventEmitter<FilterValues>();
   @Output() closed = new EventEmitter<void>();
 
-  fuelTypes: FuelType[] = [...FUEL_TYPES];
-  fuelLabels = FUEL_LABELS;
+  readonly allFuelOptions: FuelTypeOrAll[] = ['Tous', ...FUEL_TYPES];
+  readonly fuelLabels = FUEL_LABELS;
+  readonly fuelNotes = FUEL_NOTES;
 
-  selectFuel(fuel: FuelType): void {
+  get currentFuelNote(): string | undefined {
+    return this.fuelNotes[this.values.fuelType];
+  }
+
+  selectFuel(fuel: FuelTypeOrAll): void {
     this.values = { ...this.values, fuelType: fuel };
     this.emit();
   }
@@ -404,7 +421,7 @@ export class FiltersComponent {
   }
 
   reset(): void {
-    this.values = { fuelType: 'SP95', radiusKm: 10, maxPrice: null };
+    this.values = { fuelType: 'E10', radiusKm: 10, maxPrice: null };
     this.emit();
   }
 

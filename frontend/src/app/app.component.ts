@@ -8,6 +8,7 @@ import { AddressSearchComponent } from './components/address-search/address-sear
 import { PriceHistoryComponent } from './components/price-history/price-history.component';
 import { StationCacheService } from './services/station-cache.service';
 import { GeolocationService } from './services/geolocation.service';
+import { FUEL_LABELS } from './models/station.model';
 import { Station } from './models/station.model';
 
 @Component({
@@ -86,7 +87,7 @@ import { Station } from './models/station.model';
 
         <!-- Active filters chip -->
         <div class="active-filter-chip" *ngIf="userLocation() && !loading()">
-          <span class="chip-fuel">{{ filters().fuelType }}</span>
+          <span class="chip-fuel">{{ fuelLabels[filters().fuelType] }}</span>
           <span class="chip-sep">·</span>
           <span class="chip-radius">{{ filters().radiusKm }} km</span>
           <span *ngIf="filters().maxPrice" class="chip-sep">·</span>
@@ -506,6 +507,7 @@ import { Station } from './models/station.model';
   `]
 })
 export class AppComponent {
+  readonly fuelLabels = FUEL_LABELS;
   private allStations = signal<Station[]>([]);
 
   userLocation  = signal<{ lat: number; lon: number } | null>(null);
@@ -515,7 +517,7 @@ export class AppComponent {
   locating    = signal(false);
   error       = signal<string | null>(null);
   sheetExpanded = signal(false);
-  filters     = signal<FilterValues>({ fuelType: 'SP95' as const, radiusKm: 10, maxPrice: null });
+  filters     = signal<FilterValues>({ fuelType: 'E10', radiusKm: 10, maxPrice: null });
   historyStation = signal<Station | null>(null);
   filtersOpen = signal(false);
 
@@ -530,10 +532,12 @@ export class AppComponent {
 
   bestPrice = computed(() => {
     const fuel = this.filters().fuelType;
+    const matchTypes = fuel === 'E10' ? new Set(['E10', 'SP95']) : new Set([fuel]);
     let min = Infinity;
     for (const s of this.displayedStations()) {
-      const price = s.fuels.find(f => f.type === fuel)?.price;
-      if (price != null && price < min) min = price;
+      const price = s.fuels.filter(f => matchTypes.has(f.type))
+                           .reduce((m, f) => Math.min(m, f.price), Infinity);
+      if (price < min) min = price;
     }
     return min === Infinity ? null : min;
   });
