@@ -26,6 +26,36 @@ export class StationService {
     return this.http.get<Station[]>(`${this.apiUrl}/stations/search`, { params: httpParams });
   }
 
+  recommendStations(params: {
+    lat: number;
+    lon: number;
+    radiusKm: number;
+    fuelType?: string;
+    maxPrice?: number | null;
+    services?: string[];
+    limit?: number;
+  }): Observable<Station[]> {
+    let httpParams = new HttpParams()
+      .set('lat', params.lat.toString())
+      .set('lon', params.lon.toString())
+      .set('radius_km', params.radiusKm.toString())
+      .set('limit', (params.limit ?? 50).toString());
+
+    if (params.fuelType && params.fuelType !== 'Tous') {
+      httpParams = httpParams.set('fuel_type', params.fuelType);
+    }
+    if (params.maxPrice != null) {
+      httpParams = httpParams.set('max_price', params.maxPrice.toString());
+    }
+    if (params.services && params.services.length > 0) {
+      for (const svc of params.services) {
+        httpParams = httpParams.append('services', svc);
+      }
+    }
+
+    return this.http.get<Station[]>(`${this.apiUrl}/stations/recommend`, { params: httpParams });
+  }
+
   getStation(id: string): Observable<Station> {
     return this.http.get<Station>(`${this.apiUrl}/stations/${id}`);
   }

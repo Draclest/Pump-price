@@ -48,6 +48,11 @@ export interface Station {
   osm_id?: string;
   osm_last_updated?: string;
   distance_meters?: number;
+  // Scoring / recommendation fields
+  score?: number;
+  score_breakdown?: { price: number; distance: number; freshness: number; services: number };
+  recommendation_label?: string;
+  matched_fuel?: { type: string; price: number; updated_at: string };
 }
 
 export interface SearchParams {
@@ -57,4 +62,11 @@ export interface SearchParams {
   fuel_type?: string;
   max_price?: number;
   limit?: number;
+}
+
+export interface FilterValues {
+  fuelType: FuelTypeOrAll;
+  radiusKm: number;
+  maxPrice: number | null;
+  services: string[];
 }

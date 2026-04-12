@@ -19,6 +19,28 @@ import { openRoute } from '../../utils/navigation.util';
       (keydown.enter)="select.emit(station)"
       (keydown.space)="select.emit(station)"
     >
+      <!-- Score badge -->
+      <div
+        *ngIf="station.score != null"
+        class="score-badge"
+        [class.score-badge--green]="station.score >= 70"
+        [class.score-badge--orange]="station.score >= 50 && station.score < 70"
+        [class.score-badge--red]="station.score < 50"
+        [attr.aria-label]="'Score: ' + station.score"
+      >{{ station.score | number:'1.0-0' }}</div>
+
+      <!-- Recommendation label -->
+      <div
+        *ngIf="station.recommendation_label"
+        class="rec-label"
+        [attr.aria-label]="station.recommendation_label"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        {{ station.recommendation_label }}
+      </div>
+
       <!-- Top row -->
       <div class="card-top">
 
@@ -82,7 +104,10 @@ import { openRoute } from '../../utils/navigation.util';
           <span class="card-distance" *ngIf="station.distance_meters != null">
             {{ formatDistance(station.distance_meters) }}
           </span>
-          <span class="card-best-price" *ngIf="highlightPrice() != null">
+          <span class="card-best-price" *ngIf="station.matched_fuel">
+            {{ station.matched_fuel.price.toFixed(3) }}&nbsp;€
+          </span>
+          <span class="card-best-price" *ngIf="!station.matched_fuel && highlightPrice() != null">
             {{ highlightPrice()!.toFixed(3) }}&nbsp;€
           </span>
         </div>
@@ -139,7 +164,43 @@ import { openRoute } from '../../utils/navigation.util';
     </div>
   `,
   styles: [`
+    /* Score badge */
+    .score-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      z-index: 2;
+    }
+    .score-badge--green  { background: #16a34a; }
+    .score-badge--orange { background: #d97706; }
+    .score-badge--red    { background: #dc2626; }
+
+    /* Recommendation label */
+    .rec-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #15803d;
+      background: #dcfce7;
+      border-radius: var(--radius-pill);
+      padding: 3px 8px;
+      margin-bottom: var(--space-2);
+    }
+
     .card {
+      position: relative;
       background: var(--color-surface);
       border-radius: var(--radius-lg);
       padding: var(--space-3) var(--space-4);

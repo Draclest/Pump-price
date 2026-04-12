@@ -358,6 +358,7 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
   @Input() userLocation: { lat: number; lon: number } | null = null;
   @Input() selectedStation: Station | null = null;
   @Input() highlightFuel = 'SP95';
+  @Input() top3Ids: string[] = [];
   @Output() stationSelected = new EventEmitter<Station | null>();
   @Output() historyRequested = new EventEmitter<Station>();
 
@@ -384,9 +385,9 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.initialized) return;
     if (changes['userLocation']?.currentValue) this.centerOnUser();
-    if (changes['stations']) this.rebuildAllMarkers();
-    if (changes['selectedStation'] && !changes['stations']) this.updateSelectionMarkers();
-    if (changes['highlightFuel'] && !changes['stations']) this.rebuildAllMarkers();
+    if (changes['stations'] || changes['top3Ids']) this.rebuildAllMarkers();
+    if (changes['selectedStation'] && !changes['stations'] && !changes['top3Ids']) this.updateSelectionMarkers();
+    if (changes['highlightFuel'] && !changes['stations'] && !changes['top3Ids']) this.rebuildAllMarkers();
   }
 
   private initMap(): void {
@@ -472,6 +473,21 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
   }
 
   private buildIcon(station: Station, isSelected: boolean): L.DivIcon {
+    const top3Index = this.top3Ids.indexOf(station.id);
+    const isTop3 = top3Index !== -1;
+
+    if (isTop3) {
+      const rank = top3Index + 1;
+      return L.divIcon({
+        className: '',
+        html: `<div class="map-marker map-marker--top3 ${isSelected ? 'map-marker--selected' : ''}">
+          <span class="map-marker__rank">${rank}</span>
+        </div>`,
+        iconSize: [44, 44],
+        iconAnchor: [22, 44],
+      });
+    }
+
     const fuelForHighlight = station.fuels.find(f => f.type === this.highlightFuel);
     const priceLabel = fuelForHighlight ? `${fuelForHighlight.price.toFixed(3)} €` : '—';
     const noPrice = !fuelForHighlight;

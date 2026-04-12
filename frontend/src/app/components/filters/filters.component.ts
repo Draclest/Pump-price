@@ -1,25 +1,37 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { FUEL_TYPES, FUEL_LABELS, FUEL_NOTES, FuelTypeOrAll } from '../../models/station.model';
+import { FUEL_TYPES, FUEL_LABELS, FUEL_NOTES, FuelTypeOrAll, FilterValues } from '../../models/station.model';
 
-export interface FilterValues {
-  fuelType: FuelTypeOrAll;
-  radiusKm: number;
-  maxPrice: number | null;
-}
+export { FilterValues };
+
+const SERVICE_OPTIONS: { label: string; value: string }[] = [
+  { label: 'Ouvert 24/7',  value: '24/7' },
+  { label: 'Automate CB', value: 'Automate CB' },
+  { label: 'Boutique',    value: 'Boutique' },
+  { label: 'Lavage',      value: 'Lavage' },
+  { label: 'Toilettes',   value: 'Toilettes' },
+];
 
 @Component({
   selector: 'app-filters',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <!-- Backdrop -->
-    <div class="filters-backdrop" (click)="closed.emit()" aria-hidden="true"></div>
+    <!-- Backdrop (only on mobile/drawer mode) -->
+    <ng-container *ngIf="drawerMode">
+      <div class="filters-backdrop" (click)="closed.emit()" aria-hidden="true"></div>
+    </ng-container>
 
-    <!-- Drawer -->
-    <div class="filters-drawer" role="dialog" aria-modal="true" aria-label="Filtres de recherche">
-      <div class="drawer-header">
+    <!-- Drawer / inline panel -->
+    <div
+      class="filters-drawer"
+      [class.filters-drawer--inline]="!drawerMode"
+      role="dialog"
+      [attr.aria-modal]="drawerMode ? 'true' : null"
+      aria-label="Filtres de recherche"
+    >
+      <div class="drawer-header" *ngIf="drawerMode">
         <span class="drawer-title">Filtres</span>
         <button class="drawer-close" (click)="closed.emit()" aria-label="Fermer les filtres">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -30,7 +42,7 @@ export interface FilterValues {
         </button>
       </div>
 
-      <div class="drawer-body">
+      <div class="drawer-body" [class.drawer-body--inline]="!drawerMode">
 
         <!-- Fuel type -->
         <div class="filter-section">
@@ -102,10 +114,32 @@ export interface FilterValues {
           </div>
         </div>
 
+        <!-- Services -->
+        <div class="filter-section">
+          <label class="section-label">Services</label>
+          <div class="checkbox-group">
+            <label
+              *ngFor="let svc of serviceOptions"
+              class="checkbox-label"
+              [class.checkbox-label--active]="isServiceSelected(svc.value)"
+            >
+              <input
+                type="checkbox"
+                class="checkbox-input"
+                [checked]="isServiceSelected(svc.value)"
+                (change)="toggleService(svc.value)"
+                [attr.aria-label]="svc.label"
+              />
+              <span class="checkbox-mark"></span>
+              <span class="checkbox-text">{{ svc.label }}</span>
+            </label>
+          </div>
+        </div>
+
       </div>
 
-      <!-- Footer -->
-      <div class="drawer-footer">
+      <!-- Footer (drawer mode only) -->
+      <div class="drawer-footer" *ngIf="drawerMode">
         <button class="btn-reset" (click)="reset()" type="button">Réinitialiser</button>
         <button class="btn-apply" (click)="closed.emit()" type="button">Appliquer</button>
       </div>
@@ -138,6 +172,15 @@ export interface FilterValues {
       flex-direction: column;
       max-height: 85vh;
       animation: slide-up 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .filters-drawer--inline {
+      position: static;
+      border-radius: 0;
+      box-shadow: none;
+      animation: none;
+      max-height: none;
+      background: transparent;
     }
 
     @keyframes slide-up {
@@ -183,6 +226,11 @@ export interface FilterValues {
       display: flex;
       flex-direction: column;
       gap: var(--space-5);
+    }
+
+    .drawer-body--inline {
+      overflow-y: visible;
+      padding: 0;
     }
 
     .filter-section {
@@ -340,6 +388,74 @@ export interface FilterValues {
     }
     .price-clear:hover { color: var(--color-error); background: var(--color-error-bg); }
 
+    /* Checkboxes */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--color-border);
+      background: var(--color-bg);
+      transition: all var(--transition-fast);
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .checkbox-label:active { transform: scale(0.98); }
+    .checkbox-label--active {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .checkbox-input {
+      display: none;
+    }
+
+    .checkbox-mark {
+      width: 18px;
+      height: 18px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--color-border);
+      background: var(--color-surface);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+    }
+
+    .checkbox-label--active .checkbox-mark {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    .checkbox-label--active .checkbox-mark::after {
+      content: '';
+      display: block;
+      width: 5px;
+      height: 9px;
+      border: 2px solid #fff;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+
+    .checkbox-text {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .checkbox-label--active .checkbox-text {
+      color: var(--color-primary-dark);
+    }
+
     /* Footer */
     .drawer-footer {
       display: flex;
@@ -393,13 +509,15 @@ export interface FilterValues {
   `]
 })
 export class FiltersComponent {
-  @Input() values: FilterValues = { fuelType: 'E10', radiusKm: 10, maxPrice: null };
+  @Input() values: FilterValues = { fuelType: 'E10', radiusKm: 10, maxPrice: null, services: [] };
+  @Input() drawerMode = true;
   @Output() changed = new EventEmitter<FilterValues>();
   @Output() closed = new EventEmitter<void>();
 
   readonly allFuelOptions: FuelTypeOrAll[] = ['Tous', ...FUEL_TYPES];
   readonly fuelLabels = FUEL_LABELS;
   readonly fuelNotes = FUEL_NOTES;
+  readonly serviceOptions = SERVICE_OPTIONS;
 
   get currentFuelNote(): string | undefined {
     return this.fuelNotes[this.values.fuelType];
@@ -420,8 +538,21 @@ export class FiltersComponent {
     this.emit();
   }
 
+  isServiceSelected(value: string): boolean {
+    return (this.values.services || []).includes(value);
+  }
+
+  toggleService(value: string): void {
+    const current = this.values.services || [];
+    const next = current.includes(value)
+      ? current.filter(s => s !== value)
+      : [...current, value];
+    this.values = { ...this.values, services: next };
+    this.emit();
+  }
+
   reset(): void {
-    this.values = { fuelType: 'E10', radiusKm: 10, maxPrice: null };
+    this.values = { fuelType: 'E10', radiusKm: 10, maxPrice: null, services: [] };
     this.emit();
   }
 

@@ -1,15 +1,15 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { switchMap, of, catchError } from 'rxjs';
 
 import { MapComponent } from './components/map/map.component';
-import { FiltersComponent, FilterValues } from './components/filters/filters.component';
+import { FiltersComponent } from './components/filters/filters.component';
 import { StationCardComponent } from './components/station-card/station-card.component';
 import { AddressSearchComponent } from './components/address-search/address-search.component';
 import { PriceHistoryComponent } from './components/price-history/price-history.component';
-import { StationCacheService } from './services/station-cache.service';
+import { StationService } from './services/station.service';
 import { GeolocationService } from './services/geolocation.service';
-import { FUEL_LABELS } from './models/station.model';
-import { Station } from './models/station.model';
+import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
 
 @Component({
   selector: 'app-root',
@@ -22,10 +22,12 @@ import { Station } from './models/station.model';
   template: `
     <div class="app-shell">
 
-      <!-- Header -->
-      <header class="app-header">
-        <div class="header-inner">
-          <div class="header-brand">
+      <!-- ── Left Sidebar ── -->
+      <aside class="sidebar" [class.sidebar--open]="sidebarOpen()">
+
+        <!-- Sidebar header -->
+        <div class="sidebar-header">
+          <div class="sidebar-brand">
             <svg class="brand-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M3 22V8l9-4 9 4v14"/>
               <path d="M10 14h4"/>
@@ -33,162 +35,155 @@ import { Station } from './models/station.model';
               <circle cx="18" cy="9" r="1"/>
               <path d="M18 10v5a1 1 0 0 0 2 0v-3l-2-2"/>
             </svg>
-            <h1 class="brand-title">Prix à la pompe</h1>
+            <h1 class="brand-title">Pump Price</h1>
           </div>
-
-          <div class="header-actions">
-            <button
-              class="btn-icon"
-              (click)="filtersOpen.set(true)"
-              [class.btn-icon--active]="hasActiveFilters()"
-              title="Filtres"
-              aria-label="Ouvrir les filtres"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="4" y1="6" x2="20" y2="6"/>
-                <line x1="8" y1="12" x2="16" y2="12"/>
-                <line x1="11" y1="18" x2="13" y2="18"/>
-              </svg>
-              <span class="filter-dot" *ngIf="hasActiveFilters()"></span>
-            </button>
-
-            <button
-              class="btn-icon btn-icon--primary"
-              (click)="locateUser()"
-              [disabled]="locating()"
-              title="Me localiser"
-              aria-label="Me localiser"
-            >
-              <svg *ngIf="!locating()" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
-                <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
-              </svg>
-              <svg *ngIf="locating()" class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-              </svg>
-            </button>
-          </div>
+          <button
+            class="btn-icon btn-icon--primary"
+            (click)="locateUser()"
+            [disabled]="locating()"
+            title="Me localiser"
+            aria-label="Me localiser"
+          >
+            <svg *ngIf="!locating()" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+              <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
+            </svg>
+            <svg *ngIf="locating()" class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+          </button>
+          <!-- Mobile close button -->
+          <button
+            class="btn-icon sidebar-close-btn"
+            (click)="sidebarOpen.set(false)"
+            aria-label="Fermer la liste"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
 
-        <app-address-search (locationSelected)="onAddressSelected($event)"></app-address-search>
-      </header>
+        <!-- Address search -->
+        <div class="sidebar-search">
+          <app-address-search (locationSelected)="onAddressSelected($event)"></app-address-search>
+        </div>
 
-      <!-- Map -->
+        <!-- Filters inline -->
+        <div class="sidebar-filters">
+          <div class="sidebar-section-title">Filtres</div>
+          <app-filters
+            [values]="filters()"
+            [drawerMode]="false"
+            (changed)="onFiltersChanged($event)"
+          ></app-filters>
+        </div>
+
+        <!-- Error -->
+        <div class="sidebar-error" role="alert" *ngIf="error()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ error() }}
+        </div>
+
+        <!-- Loading state -->
+        <ng-container *ngIf="loading()">
+          <div class="sidebar-section-title">Chargement…</div>
+          <div class="skeleton-card" *ngFor="let i of [1,2,3]">
+            <div class="sk-line sk-line--title"></div>
+            <div class="sk-line sk-line--sub"></div>
+            <div class="sk-badges">
+              <div class="sk-badge" *ngFor="let j of [1,2,3]"></div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Results -->
+        <ng-container *ngIf="!loading() && userLocation()">
+
+          <!-- No results -->
+          <div class="sidebar-empty" *ngIf="displayedStations().length === 0">
+            Aucune station trouvée
+          </div>
+
+          <!-- Top 3 -->
+          <ng-container *ngIf="top3().length > 0">
+            <div class="sidebar-section-title sidebar-section-title--top3">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" aria-hidden="true">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              Top 3
+            </div>
+            <app-station-card
+              *ngFor="let s of top3(); trackBy: trackById"
+              [station]="s"
+              [selected]="selectedStation()?.id === s.id"
+              [highlightFuel]="filters().fuelType"
+              (select)="onStationSelected($event)"
+              (historyRequested)="historyStation.set($event)"
+            ></app-station-card>
+          </ng-container>
+
+          <!-- Other stations -->
+          <ng-container *ngIf="otherStations().length > 0">
+            <div class="sidebar-section-title">
+              Autres stations
+              <span class="section-count">{{ otherStations().length }}</span>
+            </div>
+            <app-station-card
+              *ngFor="let s of otherStations(); trackBy: trackById"
+              [station]="s"
+              [selected]="selectedStation()?.id === s.id"
+              [highlightFuel]="filters().fuelType"
+              (select)="onStationSelected($event)"
+              (historyRequested)="historyStation.set($event)"
+            ></app-station-card>
+          </ng-container>
+
+        </ng-container>
+
+        <!-- Pre-location hint -->
+        <div class="sidebar-hint" *ngIf="!loading() && !userLocation()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+          </svg>
+          <span>Localisez-vous ou entrez une adresse pour voir les stations</span>
+        </div>
+
+      </aside>
+
+      <!-- ── Map area ── -->
       <div class="map-area">
         <app-map
           [stations]="displayedStations()"
           [userLocation]="userLocation()"
           [selectedStation]="selectedStation()"
           [highlightFuel]="filters().fuelType"
+          [top3Ids]="top3Ids()"
           (stationSelected)="onStationSelected($event)"
           (historyRequested)="historyStation.set($event)"
         ></app-map>
 
-        <!-- Active filters chip -->
-        <div class="active-filter-chip" *ngIf="userLocation() && !loading()">
-          <span class="chip-fuel">{{ fuelLabels[filters().fuelType] }}</span>
-          <span class="chip-sep">·</span>
-          <span class="chip-radius">{{ filters().radiusKm }} km</span>
-          <span *ngIf="filters().maxPrice" class="chip-sep">·</span>
-          <span *ngIf="filters().maxPrice" class="chip-price">≤ {{ filters().maxPrice!.toFixed(2) }} €</span>
-        </div>
-      </div>
-
-      <!-- Error banner -->
-      <div class="error-banner" role="alert" *ngIf="error()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        {{ error() }}
-      </div>
-
-      <!-- Bottom sheet -->
-      <div class="bottom-sheet" [class.expanded]="sheetExpanded()">
-        <div
-          class="sheet-handle-wrap"
-          (click)="toggleSheet()"
-          role="button"
-          [attr.aria-expanded]="sheetExpanded()"
-          aria-label="Afficher ou masquer la liste des stations"
+        <!-- Mobile: floating "Liste" button -->
+        <button
+          class="fab-list"
+          (click)="sidebarOpen.set(true)"
+          aria-label="Afficher la liste"
         >
-          <div class="sheet-handle"></div>
-        </div>
-
-        <!-- Collapsed summary -->
-        <div class="sheet-summary" *ngIf="!sheetExpanded()" (click)="toggleSheet()">
-          <ng-container *ngIf="loading()">
-            <div class="summary-skeleton"></div>
-          </ng-container>
-          <ng-container *ngIf="!loading() && !userLocation()">
-            <span class="summary-hint">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
-              </svg>
-              Localisez-vous ou entrez une adresse
-            </span>
-          </ng-container>
-          <ng-container *ngIf="!loading() && userLocation() && displayedStations().length === 0">
-            <span class="summary-empty">Aucune station trouvée</span>
-          </ng-container>
-          <ng-container *ngIf="!loading() && displayedStations().length > 0">
-            <div class="summary-stats">
-              <span class="summary-count">{{ displayedStations().length }} stations</span>
-              <span class="summary-sep">•</span>
-              <span class="summary-best" *ngIf="bestPrice() !== null">
-                Meilleur prix
-                <strong>{{ bestPrice()! | number:'1.3-3' }} €/L</strong>
-              </span>
-            </div>
-            <svg class="summary-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="18 15 12 9 6 15"/>
-            </svg>
-          </ng-container>
-        </div>
-
-        <!-- Expanded list -->
-        <div class="station-list" *ngIf="sheetExpanded()">
-          <div class="list-header">
-            <span *ngIf="loading()" class="list-loading">Chargement…</span>
-            <ng-container *ngIf="!loading()">
-              <span class="list-count">
-                {{ displayedStations().length }} station{{ displayedStations().length !== 1 ? 's' : '' }}
-              </span>
-              <span class="list-location" *ngIf="locationLabel()">— {{ locationLabel() }}</span>
-            </ng-container>
-          </div>
-
-          <!-- Skeleton cards while loading -->
-          <ng-container *ngIf="loading()">
-            <div class="skeleton-card" *ngFor="let i of [1,2,3]">
-              <div class="sk-line sk-line--title"></div>
-              <div class="sk-line sk-line--sub"></div>
-              <div class="sk-badges">
-                <div class="sk-badge" *ngFor="let j of [1,2,3]"></div>
-              </div>
-            </div>
-          </ng-container>
-
-          <app-station-card
-            *ngFor="let s of displayedStations(); trackBy: trackById"
-            [station]="s"
-            [selected]="selectedStation()?.id === s.id"
-            [highlightFuel]="filters().fuelType"
-            (select)="onStationSelected($event)"
-            (historyRequested)="historyStation.set($event)"
-          ></app-station-card>
-        </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+          Liste
+          <span class="fab-count" *ngIf="displayedStations().length > 0">{{ displayedStations().length }}</span>
+        </button>
       </div>
-
-      <!-- Filters drawer -->
-      <app-filters
-        *ngIf="filtersOpen()"
-        [values]="filters()"
-        (changed)="onFiltersChanged($event)"
-        (closed)="filtersOpen.set(false)"
-      ></app-filters>
 
       <!-- History modal -->
       <app-price-history
@@ -202,30 +197,40 @@ import { Station } from './models/station.model';
   styles: [`
     .app-shell {
       display: flex;
-      flex-direction: column;
       height: 100dvh;
       background: var(--color-bg);
       overflow: hidden;
     }
 
-    /* ── Header ── */
-    .app-header {
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 380px;
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      gap: var(--space-2);
-      padding: 10px var(--space-3) var(--space-3);
       background: var(--color-surface);
-      box-shadow: var(--shadow-sm);
-      z-index: 10;
+      box-shadow: var(--shadow-md);
+      z-index: 20;
+      overflow-y: auto;
+      overflow-x: hidden;
+      gap: var(--space-1);
     }
 
-    .header-inner {
+    /* ── Sidebar Header ── */
+    .sidebar-header {
       display: flex;
       align-items: center;
       gap: var(--space-2);
+      padding: 12px var(--space-4) var(--space-3);
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border-subtle);
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 5;
     }
 
-    .header-brand {
+    .sidebar-brand {
       display: flex;
       align-items: center;
       gap: 7px;
@@ -249,12 +254,6 @@ import { Station } from './models/station.model';
       letter-spacing: -0.3px;
     }
 
-    .header-actions {
-      display: flex;
-      gap: var(--space-2);
-      flex-shrink: 0;
-    }
-
     .btn-icon {
       position: relative;
       width: 38px;
@@ -269,13 +268,9 @@ import { Station } from './models/station.model';
       justify-content: center;
       transition: all var(--transition-fast);
       -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
     }
     .btn-icon:active { transform: scale(0.93); }
-    .btn-icon--active {
-      border-color: var(--color-primary);
-      color: var(--color-primary);
-      background: var(--color-primary-light);
-    }
     .btn-icon--primary {
       background: var(--color-primary);
       border-color: var(--color-primary);
@@ -290,55 +285,59 @@ import { Station } from './models/station.model';
       background: var(--color-primary-dark);
     }
 
-    .filter-dot {
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--color-primary);
-      border: 1.5px solid var(--color-surface);
-    }
-
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
     .spin { animation: spin 0.8s linear infinite; }
 
-    /* ── Map ── */
-    .map-area {
-      flex: 1;
-      min-height: 0;
-      position: relative;
-      z-index: 1;
+    /* Mobile-only close button - hidden on desktop */
+    .sidebar-close-btn {
+      display: none;
     }
 
-    .active-filter-chip {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--color-surface);
-      border-radius: var(--radius-pill);
-      box-shadow: var(--shadow-md);
-      padding: 5px 12px;
-      font-size: var(--font-size-xs);
-      font-weight: 600;
-      color: var(--color-text-secondary);
+    /* ── Sidebar sections ── */
+    .sidebar-search {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-border-subtle);
+      flex-shrink: 0;
+    }
+
+    .sidebar-filters {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-title {
       display: flex;
       align-items: center;
-      gap: 5px;
-      white-space: nowrap;
-      z-index: 5;
-      pointer-events: none;
+      gap: 6px;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: var(--space-3) var(--space-4) var(--space-1);
     }
-    .chip-fuel { color: var(--color-primary); font-weight: 700; }
-    .chip-sep { color: var(--color-text-muted); }
-    .chip-price { color: var(--color-warning); font-weight: 700; }
 
-    /* ── Error banner ── */
-    .error-banner {
+    .sidebar-section-title--top3 {
+      color: #b45309;
+    }
+
+    .section-count {
+      background: var(--color-bg);
+      color: var(--color-text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: var(--radius-pill);
+      margin-left: 2px;
+    }
+
+    .sidebar-error {
       display: flex;
       align-items: center;
       gap: var(--space-2);
@@ -347,123 +346,74 @@ import { Station } from './models/station.model';
       padding: 8px var(--space-4);
       font-size: var(--font-size-sm);
       font-weight: 500;
+      margin: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
     }
 
-    /* ── Bottom Sheet ── */
-    .bottom-sheet {
-      background: var(--color-surface);
-      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-      box-shadow: var(--shadow-sheet);
-      z-index: 20;
-      transition: max-height var(--transition-slow);
-      max-height: 64px;
-      overflow: hidden;
-    }
-    .bottom-sheet.expanded {
-      max-height: 58vh;
-      overflow-y: auto;
-    }
-
-    .sheet-handle-wrap {
-      display: flex;
-      justify-content: center;
-      padding: 10px 0 4px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .sheet-handle {
-      width: 36px;
-      height: 4px;
-      background: var(--color-border);
-      border-radius: var(--radius-pill);
-    }
-
-    .sheet-summary {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 2px var(--space-4) 14px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      min-height: 36px;
-    }
-
-    .summary-skeleton {
-      height: 14px;
-      width: 180px;
-      background: linear-gradient(90deg, var(--color-bg) 25%, var(--color-border) 50%, var(--color-bg) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: var(--radius-sm);
-    }
-
-    .summary-hint {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .sidebar-empty {
+      padding: var(--space-4);
       font-size: var(--font-size-sm);
       color: var(--color-text-muted);
-      font-weight: 500;
+      text-align: center;
     }
 
-    .summary-empty {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-muted);
-    }
-
-    .summary-stats {
+    .sidebar-hint {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 7px;
+      gap: var(--space-3);
+      padding: var(--space-6) var(--space-4);
+      color: var(--color-text-muted);
       font-size: var(--font-size-sm);
+      text-align: center;
+      line-height: 1.5;
     }
-    .summary-count {
-      font-weight: 600;
-      color: var(--color-text-primary);
-    }
-    .summary-sep { color: var(--color-text-muted); }
-    .summary-best {
-      color: var(--color-text-secondary);
-    }
-    .summary-best strong {
+    .sidebar-hint svg {
       color: var(--color-primary);
+      opacity: 0.5;
+      width: 32px;
+      height: 32px;
+    }
+
+    /* ── Map area ── */
+    .map-area {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+    }
+
+    /* ── FAB List button (mobile only) ── */
+    .fab-list {
+      display: none;
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-surface);
+      border: none;
+      border-radius: var(--radius-pill);
+      box-shadow: var(--shadow-lg);
+      padding: 10px 20px;
+      font-size: var(--font-size-sm);
+      font-family: var(--font-family);
       font-weight: 700;
-    }
-
-    .summary-chevron {
-      color: var(--color-text-muted);
-      flex-shrink: 0;
-    }
-
-    /* ── Station list ── */
-    .station-list {
-      padding-bottom: var(--space-4);
-    }
-
-    .list-header {
-      padding: var(--space-2) var(--space-4) var(--space-1);
-      display: flex;
+      color: var(--color-text-primary);
+      cursor: pointer;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      z-index: 10;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     }
-    .list-count {
-      font-size: var(--font-size-xs);
-      font-weight: 700;
-      color: var(--color-text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .list-location {
-      font-size: var(--font-size-xs);
-      color: var(--color-text-muted);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .list-loading {
-      font-size: var(--font-size-xs);
-      color: var(--color-text-muted);
-      font-weight: 500;
+    .fab-list:active { transform: translateX(-50%) scale(0.95); }
+
+    .fab-count {
+      background: var(--color-primary);
+      color: var(--color-text-on-primary);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
     }
 
     /* ── Skeleton cards ── */
@@ -504,11 +454,52 @@ import { Station } from './models/station.model';
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
     }
+
+    /* ── Mobile responsive (≤768px) ── */
+    @media (max-width: 768px) {
+      .app-shell {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 85vh;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        box-shadow: var(--shadow-sheet);
+        z-index: 50;
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        /* Prevent bottom of page from showing */
+        padding-bottom: env(safe-area-inset-bottom, 0);
+      }
+
+      .sidebar--open {
+        transform: translateY(0);
+      }
+
+      .sidebar-close-btn {
+        display: flex;
+      }
+
+      .map-area {
+        position: absolute;
+        inset: 0;
+      }
+
+      .fab-list {
+        display: flex;
+      }
+    }
   `]
 })
 export class AppComponent {
   readonly fuelLabels = FUEL_LABELS;
-  private allStations = signal<Station[]>([]);
+  private stationService = inject(StationService);
+  private geolocationService = inject(GeolocationService);
 
   userLocation  = signal<{ lat: number; lon: number } | null>(null);
   locationLabel = signal<string | null>(null);
@@ -516,41 +507,17 @@ export class AppComponent {
   loading     = signal(false);
   locating    = signal(false);
   error       = signal<string | null>(null);
-  sheetExpanded = signal(false);
-  filters     = signal<FilterValues>({ fuelType: 'E10', radiusKm: 10, maxPrice: null });
+  filters     = signal<FilterValues>({ fuelType: 'E10', radiusKm: 10, maxPrice: null, services: [] });
   historyStation = signal<Station | null>(null);
-  filtersOpen = signal(false);
+  sidebarOpen = signal(false);
 
-  displayedStations = computed(() => {
-    const loc = this.userLocation();
-    if (!loc || this.allStations().length === 0) return [];
-    const f = this.filters();
-    return this.cacheService.filterStations(
-      this.allStations(), loc.lat, loc.lon, f.radiusKm, f.fuelType || undefined, f.maxPrice,
-    );
-  });
+  private _allStations = signal<Station[]>([]);
 
-  bestPrice = computed(() => {
-    const fuel = this.filters().fuelType;
-    const matchTypes = fuel === 'E10' ? new Set(['E10', 'SP95']) : new Set([fuel]);
-    let min = Infinity;
-    for (const s of this.displayedStations()) {
-      const price = s.fuels.filter(f => matchTypes.has(f.type))
-                           .reduce((m, f) => Math.min(m, f.price), Infinity);
-      if (price < min) min = price;
-    }
-    return min === Infinity ? null : min;
-  });
+  displayedStations = computed(() => this._allStations());
 
-  hasActiveFilters = computed(() => {
-    const f = this.filters();
-    return f.radiusKm !== 10 || f.maxPrice !== null;
-  });
-
-  constructor(
-    private cacheService: StationCacheService,
-    private geolocationService: GeolocationService,
-  ) {}
+  top3 = computed(() => this.displayedStations().slice(0, 3));
+  otherStations = computed(() => this.displayedStations().slice(3));
+  top3Ids = computed(() => this.top3().map(s => s.id));
 
   trackById(_: number, s: Station): string { return s.id; }
 
@@ -580,11 +547,20 @@ export class AppComponent {
   private _fetchStations(lat: number, lon: number): void {
     this.loading.set(true);
     this.error.set(null);
-    this.cacheService.getStations(lat, lon).subscribe({
+    const f = this.filters();
+    this.stationService.recommendStations({
+      lat,
+      lon,
+      radiusKm: f.radiusKm,
+      fuelType: f.fuelType !== 'Tous' ? f.fuelType : undefined,
+      maxPrice: f.maxPrice,
+      services: f.services,
+      limit: 50,
+    }).subscribe({
       next: (stations) => {
-        this.allStations.set(stations);
+        this._allStations.set(stations);
         this.loading.set(false);
-        if (stations.length > 0) this.sheetExpanded.set(true);
+        if (stations.length > 0) this.sidebarOpen.set(true);
       },
       error: (err) => {
         this.error.set('Erreur lors de la recherche : ' + err.message);
@@ -595,15 +571,14 @@ export class AppComponent {
 
   onFiltersChanged(f: FilterValues): void {
     this.filters.set(f);
+    const loc = this.userLocation();
+    if (loc) {
+      this._fetchStations(loc.lat, loc.lon);
+    }
   }
 
   onStationSelected(station: Station | null): void {
     this.selectedStation.set(station);
-    if (station) this.sheetExpanded.set(false);
-  }
-
-  toggleSheet(): void {
-    this.sheetExpanded.update(v => !v);
-    if (this.sheetExpanded()) this.selectedStation.set(null);
+    if (station) this.sidebarOpen.set(false);
   }
 }

@@ -156,6 +156,38 @@ html, body {
   border-top-color: var(--color-border);
 }
 
+/* Top 3 gold markers */
+.map-marker--top3 {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.5), var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 600;
+  padding: 0;
+}
+
+.map-marker--top3::after {
+  display: none;
+}
+
+.map-marker--top3.map-marker--selected {
+  transform: scale(1.15);
+  background: #d97706;
+  border-color: #fff;
+}
+
+.map-marker__rank {
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+
 /* ─── Scrollbar ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 4px;

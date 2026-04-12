@@ -3,9 +3,9 @@
 ## 🧭 Project Overview
 
 **Name:** Open Project - Pump Price
-**Goal:** Display fuel prices on an interactive map using public data from data.gouv.fr.
+**Goal:** Evolve from a simple price comparison tool into a **fuel decision assistant** that recommends the best station based on total cost, context, and data reliability.
 **Audience:** General public
-**Problem Solved:** Help users find the cheapest fuel nearby quickly and reliably.
+**Problem Solved:** Help users make the **optimal fueling decision**, not just find the lowest price.
 
 ---
 
@@ -56,6 +56,7 @@ Claude acts as a **fully autonomous software engineer**.
 * Setup Docker environment
 * Generate tests
 * Propose improvements proactively
+* Maintain and update this file (`claude.md`) as the architecture evolves
 
 ### Behavior
 
@@ -68,23 +69,83 @@ Claude acts as a **fully autonomous software engineer**.
 
 ## 📦 Data Management
 
-### Source
+### Sources
 
 * Public fuel price dataset from data.gouv.fr
-* Updated regularly
+* OpenStreetMap (for enrichment: brand, services, opening hours)
 
 ### Ingestion
 
 * Implement a data ingestion pipeline:
 
-  * Fetch data daily (at least once per day)
+  * Fetch fuel data daily (at least once per day)
+  * Fetch OSM data periodically (batch, not real-time)
   * Normalize and index into Elasticsearch
   * Handle partial updates if possible
+
+### Enrichment
+
+* Merge fuel data with OSM data using:
+
+  * Geo-distance matching (< 50m)
+  * Fuzzy matching on station name (optional)
 
 ### Storage Policy
 
 * Keep **30 days of history only**
-* Implement automatic data retention (index lifecycle management preferred)
+* Implement automatic data retention (Index Lifecycle Management)
+
+---
+
+## 🧠 Core Concept: Decision Engine
+
+The system MUST compute the **best station**, not just list stations.
+
+### Key Features
+
+#### 1. Real Cost Calculation
+
+Compute total cost:
+
+* fuel cost
+* travel cost (based on distance and consumption)
+
+#### 2. Station Scoring System
+
+Each station must have a **score (0–100)** based on:
+
+* price
+* distance
+* data freshness
+* availability (stock)
+* services (from OSM)
+
+Weights must be configurable via `.env`.
+
+#### 3. Data Reliability
+
+* Compute a `data_confidence_score`
+* Penalize outdated prices
+* Configurable freshness threshold
+
+#### 4. Route Optimization
+
+* Support "on the way" queries
+* Filter stations along a route using geo queries
+
+#### 5. Price History & Trends
+
+* Store historical prices
+* Compute trends:
+
+  * increasing
+  * decreasing
+  * stable
+
+#### 6. Smart Alerts (Design Phase)
+
+* Price drop alerts
+* Best station change alerts
 
 ---
 
@@ -109,17 +170,30 @@ Claude acts as a **fully autonomous software engineer**.
   * Location (radius)
   * Fuel type
   * Price
+* Compute:
+
+  * total_cost
+  * station score
+  * recommendation
 * Historical price tracking
 * Efficient geolocation queries (Elasticsearch geo queries)
 
 ### Frontend
 
 * Mobile-first design (priority)
-* Responsive UI (optimized for smartphones first, then desktop)
+* Responsive UI
 * Interactive map with markers
-* Price display per station
-* Filters (fuel type, price, distance)
-* Smooth UX (fast loading, minimal lag)
+* Display:
+
+  * price
+  * score
+  * recommendation badge
+* Filters:
+
+  * fuel type
+  * price
+  * distance
+* Smooth UX
 
 ---
 
@@ -137,6 +211,7 @@ Claude acts as a **fully autonomous software engineer**.
 * Error rate
 * Throughput
 * Data ingestion duration
+* Scoring computation time
 
 ### Logs
 
@@ -161,20 +236,25 @@ Claude acts as a **fully autonomous software engineer**.
 * Unit tests required
 * API tests required
 * Critical paths must be covered
+* Add tests for scoring logic and cost calculation
 
 ---
 
 ## 🔐 Configuration & Secrets
 
 * All sensitive configuration MUST be stored in a `.env` file
+
 * Includes:
 
   * Elasticsearch connection URL
-  * Elasticsearch credentials (username/password or API key)
-  * Any future external API keys
-* The application must load configuration via environment variables
-* NEVER hardcode secrets in the codebase
-* Provide a `.env.example` file for documentation
+  * Elasticsearch credentials
+  * Scoring weights
+  * Freshness thresholds
+  * External API configs
+
+* NEVER hardcode secrets
+
+* Provide a `.env.example`
 
 ---
 
@@ -186,14 +266,13 @@ Claude acts as a **fully autonomous software engineer**.
   * Backend service
   * Frontend service
   * Elasticsearch
-* Use docker-compose for local orchestration
+* Use docker-compose
 
 ---
 
 ## 📏 Coding Standards
 
-* Follow standard best practices for each language
-* Write clean, maintainable, production-ready code
+* Clean, maintainable, production-ready code
 * Avoid unnecessary complexity
 * Prefer explicit over implicit
 
@@ -210,13 +289,11 @@ Claude MUST NOT:
 * Generate untested or speculative code
 
 If uncertain:
-→ Explicitly state: "I cannot confirm this"
+→ "I cannot confirm this"
 
 ---
 
 ## 🧠 Decision Guidelines
-
-When multiple solutions exist:
 
 1. Prefer simplicity
 2. Prefer performance
@@ -232,19 +309,18 @@ Claude should start by:
 1. Designing the architecture
 2. Defining the monorepo structure
 3. Creating backend skeleton (FastAPI)
-4. Designing Elasticsearch index (mapping + geo_point + time-based data)
-5. Implementing data ingestion pipeline
+4. Designing Elasticsearch index (geo + time-based + scoring fields)
+5. Implementing ingestion + enrichment pipeline
 6. Adding OpenTelemetry instrumentation
 7. Creating Docker setup
 8. Creating frontend skeleton (Angular + Leaflet)
+9. Implementing scoring engine
 
 ---
 
 ## 📌 Notes
 
 * This project is observability-first
-* Code quality and performance are critical
+* Elasticsearch is the single source of truth
 * The system must be extensible and production-ready
-* Elasticsearch is the single source of truth for search and historical data
-
----
+* The main value comes from **decision intelligence**, not raw data

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 \"/home/draclest/Documents/Claude Porject/prix à la pompe/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"fuel price finder mobile map consumer utility\" --design-system -p \"Prix à la Pompe\")",
+      "Bash(npm run:*)"
+    ]
+  }
+}

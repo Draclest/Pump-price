@@ -76,6 +76,11 @@ class StationSearchResult(BaseModel):
     reg_code: Optional[str] = None
     # Search result
     distance_meters: Optional[float] = None
+    # Scoring / recommendation (populated by /recommend endpoint)
+    score: Optional[float] = None
+    score_breakdown: Optional[dict] = None
+    recommendation_label: Optional[str] = None
+    matched_fuel: Optional[dict] = None
 
 
 class SearchParams(BaseModel):
