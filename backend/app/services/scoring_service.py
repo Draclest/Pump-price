@@ -187,29 +187,58 @@ def score_stations(
     enriched.sort(key=lambda e: e["_score"], reverse=True)
 
     # ------------------------------------------------------------------
-    # 5. Assign recommendation labels to top 3
+    # 5. Assign recommendation labels to top 3 — based on ACTUAL standings
     # ------------------------------------------------------------------
-    for i, e in enumerate(enriched[:3]):
-        bd = e["_score_breakdown"]
+    top3 = enriched[:3]
+
+    # Find who is actually cheapest / closest / most open among top 3
+    cheapest_id  = min(top3, key=lambda e: e["_score_breakdown"]["price"] * -1)["id"]   # highest price_score
+    closest_id   = min(top3, key=lambda e: e["_score_breakdown"]["distance"] * -1)["id"]
+    freshest_id  = min(top3, key=lambda e: e["_score_breakdown"]["freshness"] * -1)["id"]
+    best_svc_id  = min(top3, key=lambda e: e["_score_breakdown"]["services"] * -1)["id"]
+    is_open_ids  = {e["id"] for e in top3 if e.get("is_open") is True}
+
+    assigned: set[str] = set()
+
+    def _pick_label(e: dict) -> str:
+        sid = e["id"]
+        bd  = e["_score_breakdown"]
+        dominant = max(bd, key=lambda k: bd[k])   # which criterion contributes most
+
+        if sid == cheapest_id and dominant == "price":
+            return "Meilleur prix"
+        if sid == closest_id and dominant == "distance":
+            return "Le plus proche"
+        if sid in is_open_ids and dominant == "services":
+            return "Ouvert et bien équipé"
+        if sid == cheapest_id:
+            return "Meilleur prix"
+        if sid == closest_id:
+            return "Le plus proche"
+        if sid == best_svc_id:
+            return "Mieux équipée"
+        return "Meilleur compromis"
+
+    for i, e in enumerate(top3):
         if i == 0:
-            label = "Meilleur choix"
-        elif i == 1:
-            max_component = max(bd, key=lambda k: bd[k])
-            if max_component == "price":
-                label = "Moins cher"
-            elif max_component == "distance":
-                label = "Le plus proche"
-            else:
-                label = "Bon compromis"
-        else:  # i == 2
-            max_component = max(bd, key=lambda k: bd[k])
-            if max_component == "services":
-                label = "Mieux équipée"
-            elif max_component == "distance":
-                label = "À deux pas"
-            else:
-                label = "Bon rapport qualité-prix"
-        e["_recommendation_label"] = label
+            # Rank 1 always gets a superlative that reflects its real strength
+            e["_recommendation_label"] = _pick_label(e)
+        else:
+            # Rank 2 & 3: label what makes THIS station stand out vs rank 1
+            label = _pick_label(e)
+            # Avoid duplicating rank-1 label
+            if label == top3[0]["_recommendation_label"] and i > 0:
+                bd = e["_score_breakdown"]
+                # pick second-strongest criterion
+                sorted_k = sorted(bd, key=lambda k: bd[k], reverse=True)
+                second = sorted_k[1] if len(sorted_k) > 1 else sorted_k[0]
+                label = {
+                    "price":     "Bon prix",
+                    "distance":  "À deux pas",
+                    "freshness": "Données fraîches",
+                    "services":  "Services complets",
+                }.get(second, "Bon compromis")
+            e["_recommendation_label"] = label
 
     # Remaining stations get None
     for e in enriched[3:]:
@@ -321,20 +350,45 @@ def score_stations_route(
 
     enriched.sort(key=lambda e: e["_score"], reverse=True)
 
-    # Assign recommendation labels to top 3
-    for i, e in enumerate(enriched[:3]):
-        bd = e["_score_breakdown"]
-        if i == 0:
-            label = "Meilleur prix sur le trajet"
-        elif i == 1:
-            max_component = max(("detour", "price"), key=lambda k: bd.get(k, 0))
-            if max_component == "detour":
-                label = "Sans détour"
-            else:
-                label = "Moins cher"
-        else:  # i == 2
-            label = "Bon compromis prix / détour"
-        e["_recommendation_label"] = label
+    # Assign recommendation labels to top 3 — based on ACTUAL standings
+    top3 = enriched[:3]
+
+    cheapest_id     = min(top3, key=lambda e: e["_score_breakdown"]["price"] * -1)["id"]
+    least_detour_id = min(top3, key=lambda e: e["_score_breakdown"]["detour"] * -1)["id"]
+    best_svc_id     = min(top3, key=lambda e: e["_score_breakdown"]["services"] * -1)["id"]
+
+    def _route_label(e: dict) -> str:
+        sid = e["id"]
+        bd  = e["_score_breakdown"]
+        dominant = max(bd, key=lambda k: bd[k])
+        if sid == cheapest_id and dominant == "price":
+            return "Meilleur prix sur le trajet"
+        if sid == least_detour_id and dominant == "detour":
+            return "Moins de détour"
+        if sid == cheapest_id:
+            return "Meilleur prix sur le trajet"
+        if sid == least_detour_id:
+            return "Moins de détour"
+        if sid == best_svc_id:
+            return "Mieux équipée"
+        return "Bon compromis prix / détour"
+
+    rank1_label = _route_label(top3[0])
+    top3[0]["_recommendation_label"] = rank1_label
+
+    for e in top3[1:]:
+        lbl = _route_label(e)
+        if lbl == rank1_label:
+            bd = e["_score_breakdown"]
+            sorted_k = sorted(bd, key=lambda k: bd[k], reverse=True)
+            second = next((k for k in sorted_k if k != max(bd, key=lambda k: bd[k])), sorted_k[0])
+            lbl = {
+                "price":     "Bon prix",
+                "detour":    "Sans détour",
+                "freshness": "Données fraîches",
+                "services":  "Services complets",
+            }.get(second, "Bon compromis prix / détour")
+        e["_recommendation_label"] = lbl
 
     for e in enriched[3:]:
         e["_recommendation_label"] = None

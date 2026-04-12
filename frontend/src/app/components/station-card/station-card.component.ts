@@ -12,6 +12,8 @@ import { openRoute } from '../../utils/navigation.util';
       class="card"
       [class.card--selected]="selected"
       (click)="select.emit(station)"
+      (mouseenter)="hovered.emit(station.id)"
+      (mouseleave)="hovered.emit(null)"
       role="button"
       [attr.aria-pressed]="selected"
       [attr.aria-label]="cardAriaLabel"
@@ -533,6 +535,7 @@ export class StationCardComponent {
   @Input() destLon?: number;
   @Output() select = new EventEmitter<Station>();
   @Output() historyRequested = new EventEmitter<Station>();
+  @Output() hovered = new EventEmitter<string | null>();
   @Output() exportToMaps = new EventEmitter<void>();
 
   fuelLabels = FUEL_LABELS;

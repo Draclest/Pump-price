@@ -360,6 +360,10 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
   @Input() highlightFuel = 'SP95';
   @Input() top3Ids: string[] = [];
   @Input() routeCoords: [number, number][] | null = null;  // [lon, lat] pairs
+  @Input() set hoveredStationId(id: string | null) {
+    this._hoveredStationId = id;
+    if (this.initialized) this._applyHover(id);
+  }
   @Output() stationSelected = new EventEmitter<Station | null>();
   @Output() historyRequested = new EventEmitter<Station>();
 
@@ -371,6 +375,8 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
   private userMarker: L.Marker | null = null;
   private routePolyline: L.Polyline | null = null;
   private previousSelectedId: string | null = null;
+  private _hoveredStationId: string | null = null;
+  private _previousHoveredId: string | null = null;
   private initialized = false;
 
   ngAfterViewInit(): void {
@@ -466,6 +472,29 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
     this.previousSelectedId = this.selectedStation?.id ?? null;
   }
 
+  private _applyHover(id: string | null): void {
+    // Restore previous hovered marker
+    if (this._previousHoveredId && this._previousHoveredId !== this.selectedStation?.id) {
+      const prev = this.stations.find(s => s.id === this._previousHoveredId);
+      if (prev) {
+        const m = this.markerMap.get(this._previousHoveredId);
+        if (m) m.setIcon(this.buildIcon(prev, false));
+      }
+    }
+    // Elevate new hovered marker
+    if (id && id !== this.selectedStation?.id) {
+      const st = this.stations.find(s => s.id === id);
+      if (st) {
+        const m = this.markerMap.get(id);
+        if (m) {
+          m.setIcon(this.buildIcon(st, false, true));
+          m.setZIndexOffset(500);
+        }
+      }
+    }
+    this._previousHoveredId = id;
+  }
+
   private createMarker(station: Station, isSelected: boolean): L.Marker {
     const marker = L.marker(
       [station.location.lat, station.location.lon],
@@ -475,15 +504,16 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
     return marker;
   }
 
-  private buildIcon(station: Station, isSelected: boolean): L.DivIcon {
+  private buildIcon(station: Station, isSelected: boolean, isHovered = false): L.DivIcon {
     const top3Index = this.top3Ids.indexOf(station.id);
     const isTop3 = top3Index !== -1;
+    const hoverClass = isHovered ? 'map-marker--hovered' : '';
 
     if (isTop3) {
       const rank = top3Index + 1;
       return L.divIcon({
         className: '',
-        html: `<div class="map-marker map-marker--top3 ${isSelected ? 'map-marker--selected' : ''}">
+        html: `<div class="map-marker map-marker--top3 ${isSelected ? 'map-marker--selected' : ''} ${hoverClass}">
           <span class="map-marker__rank">${rank}</span>
         </div>`,
         iconSize: [44, 44],
@@ -491,12 +521,17 @@ export class MapComponent implements OnDestroy, OnChanges, AfterViewInit {
       });
     }
 
-    const fuelForHighlight = station.fuels.find(f => f.type === this.highlightFuel);
-    const priceLabel = fuelForHighlight ? `${fuelForHighlight.price.toFixed(3)} €` : '—';
-    const noPrice = !fuelForHighlight;
+    const matchedFuels = ['E10', 'SP95'].includes(this.highlightFuel)
+      ? station.fuels.filter(f => f.type === 'E10' || f.type === 'SP95')
+      : station.fuels.filter(f => f.type === this.highlightFuel);
+    const bestFuel = matchedFuels.length
+      ? matchedFuels.reduce((a, b) => a.price < b.price ? a : b)
+      : null;
+    const priceLabel = bestFuel ? `${bestFuel.price.toFixed(3)} €` : '—';
+    const noPrice = !bestFuel;
     return L.divIcon({
       className: '',
-      html: `<div class="map-marker ${isSelected ? 'map-marker--selected' : ''} ${noPrice ? 'map-marker--no-price' : ''}">
+      html: `<div class="map-marker ${isSelected ? 'map-marker--selected' : ''} ${noPrice ? 'map-marker--no-price' : ''} ${hoverClass}">
         <span class="map-marker__price">${priceLabel}</span>
       </div>`,
       iconSize: [66, 28],

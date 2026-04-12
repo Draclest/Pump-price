@@ -147,6 +147,7 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
                 [highlightFuel]="filters().fuelType"
                 (select)="onStationSelected($event)"
                 (historyRequested)="historyStation.set($event)"
+              (hovered)="hoveredStationId.set($event)"
               ></app-station-card>
             </ng-container>
 
@@ -163,6 +164,7 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
                 [highlightFuel]="filters().fuelType"
                 (select)="onStationSelected($event)"
                 (historyRequested)="historyStation.set($event)"
+              (hovered)="hoveredStationId.set($event)"
               ></app-station-card>
             </ng-container>
 
@@ -233,6 +235,7 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
               [destLon]="routeDest()?.lon"
               (select)="onStationSelected($event)"
               (historyRequested)="historyStation.set($event)"
+              (hovered)="hoveredStationId.set($event)"
               (exportToMaps)="openGoogleMaps(s)"
             ></app-station-card>
 
@@ -253,6 +256,7 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
                 [destLon]="routeDest()?.lon"
                 (select)="onStationSelected($event)"
                 (historyRequested)="historyStation.set($event)"
+              (hovered)="hoveredStationId.set($event)"
                 (exportToMaps)="openGoogleMaps(s)"
               ></app-station-card>
             </ng-container>
@@ -278,6 +282,7 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
           [highlightFuel]="filters().fuelType"
           [top3Ids]="top3Ids()"
           [routeCoords]="routeCoords()"
+          [hoveredStationId]="hoveredStationId()"
           (stationSelected)="onStationSelected($event)"
           (historyRequested)="historyStation.set($event)"
         ></app-map>
@@ -658,6 +663,7 @@ export class AppComponent {
   filters     = signal<FilterValues>({ fuelType: 'E10', radiusKm: 10, maxPrice: null, services: [] });
   historyStation = signal<Station | null>(null);
   sidebarOpen = signal(false);
+  hoveredStationId = signal<string | null>(null);
 
   private _allStations = signal<Station[]>([]);
 
