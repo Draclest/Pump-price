@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
@@ -7,10 +7,16 @@ COPY . .
 RUN npm run build
 
 # Serve stage
-FROM nginx:alpine
+# nginx:1.27-alpine — stable, patched, minimal attack surface
+FROM nginx:1.27-alpine
+
 COPY --from=builder /app/dist/prix-a-la-pompe/browser /usr/share/nginx/html
 
-# Copy the config template — envsubst replaces ${BACKEND_URL} at container start
+# Copy the config template.
+# The nginx image entrypoint runs envsubst over files in /etc/nginx/templates/
+# and writes results to /etc/nginx/conf.d/.
+# Only ${BACKEND_URL} is substituted — Nginx variables ($host, $remote_addr…)
+# are left untouched because they are not shell environment variables.
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 80

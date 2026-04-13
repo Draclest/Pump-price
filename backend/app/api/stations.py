@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import math
-from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from elasticsearch import AsyncElasticsearch
 
@@ -74,7 +73,6 @@ async def recommend_stations(
     max_price:              float | None    = Query(default=None, ge=0),
     limit:                  int             = Query(default=50, ge=1, le=1000),
     services:               list[str]       = Query(default=[]),
-    min_freshness_hours:    int             = Query(default=48, ge=1),
     es: AsyncElasticsearch = Depends(get_es),
 ):
     params = SearchParams(
@@ -92,21 +90,13 @@ async def recommend_stations(
     # Determine which fuel types to consider
     fuel_types: list[str] = [fuel_type] if fuel_type else ["E10", "SP95", "SP98", "E85", "GPLc", "Gazole"]
 
-    # Filter by freshness: matched fuel's updated_at must be within min_freshness_hours
-    now = datetime.now(timezone.utc)
-    fresh_results: list[StationSearchResult] = []
+    # Keep only stations that have at least one matching fuel — no hard freshness cut-off:
+    # data age is already penalised in the score breakdown (freshness component).
+    station_dicts = []
     for st in results:
-        st_fuels = st.fuels or []
-        candidates = [f for f in st_fuels if f.type in fuel_types]
-        if not candidates:
-            continue
-        best = min(candidates, key=lambda f: f.price)
-        age_h = (now - best.updated_at.replace(tzinfo=timezone.utc) if best.updated_at.tzinfo is None else (now - best.updated_at)).total_seconds() / 3600.0
-        if age_h <= min_freshness_hours:
-            fresh_results.append(st)
-
-    # Convert to dicts for scoring
-    station_dicts = [r.model_dump() for r in fresh_results]
+        candidates = [f for f in (st.fuels or []) if f.type in fuel_types]
+        if candidates:
+            station_dicts.append(st.model_dump())
 
     # Score stations
     scored = score_stations(

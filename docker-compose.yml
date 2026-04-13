@@ -38,6 +38,8 @@ services:
     ports:
       - "${FRONTEND_PORT:-4200}:80"
     environment:
+      # BACKEND_URL must always be set — if missing, envsubst generates an
+      # invalid nginx config (proxy_pass ;) and the container refuses to start.
       - BACKEND_URL=${BACKEND_URL:-http://backend:8000}
     depends_on:
       - backend
