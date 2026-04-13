@@ -1,17 +1,27 @@
 import {
-  Component, EventEmitter, Output, Input, inject,
-  signal, ElementRef, HostListener, DestroyRef, OnChanges, SimpleChanges
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  EventEmitter,
+  HostListener,
+  Input,
+  OnChanges,
+  Output,
+  inject,
+  signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
+import { Subject, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { GeocodingService, AddressSuggestion } from '../../services/geocoding.service';
 
 @Component({
   selector: 'app-address-search',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="search-wrap">
       <div class="search-field" [class.search-field--focused]="focused">
@@ -22,64 +32,47 @@ import { GeocodingService, AddressSuggestion } from '../../services/geocoding.se
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
 
-        <input
-          #input
-          type="text"
-          class="search-input"
-          placeholder="Rechercher une adresse…"
-          autocomplete="off"
-          autocorrect="off"
-          spellcheck="false"
-          aria-label="Rechercher une adresse"
-          aria-autocomplete="list"
-          [attr.aria-expanded]="showSuggestions() && suggestions().length > 0"
-          [(ngModel)]="query"
-          (ngModelChange)="onQueryChange($event)"
-          (focus)="onFocus()"
-          (blur)="onBlur()"
-        />
+        <input #input type="text" class="search-input"
+               placeholder="Rechercher une adresse…"
+               autocomplete="off" autocorrect="off" spellcheck="false"
+               aria-label="Rechercher une adresse"
+               aria-autocomplete="list"
+               [attr.aria-expanded]="showSuggestions() && suggestions().length > 0"
+               [(ngModel)]="query"
+               (ngModelChange)="onQueryChange($event)"
+               (focus)="focused = true; showSuggestions.set(true)"
+               (blur)="focused = false" />
 
-        <button
-          *ngIf="query"
-          class="clear-btn"
-          (click)="clear()"
-          aria-label="Effacer la recherche"
-          type="button"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
+        @if (query) {
+          <button class="clear-btn" type="button" aria-label="Effacer la recherche"
+                  (click)="clear()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        }
       </div>
 
-      <ul
-        class="suggestions"
-        role="listbox"
-        aria-label="Suggestions d'adresses"
-        *ngIf="showSuggestions() && suggestions().length > 0"
-      >
-        <li
-          *ngFor="let s of suggestions()"
-          class="suggestion-item"
-          role="option"
-          (mousedown)="select(s)"
-        >
-          <svg class="sug-icon" width="13" height="13" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
-            <circle cx="12" cy="10" r="3"/>
-          </svg>
-          <span class="sug-label">{{ s.label }}</span>
-        </li>
-      </ul>
+      @if (showSuggestions() && suggestions().length > 0) {
+        <ul class="suggestions" role="listbox" aria-label="Suggestions d'adresses">
+          @for (s of suggestions(); track s.label) {
+            <li class="suggestion-item" role="option" (mousedown)="select(s)">
+              <svg class="sug-icon" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span class="sug-label">{{ s.label }}</span>
+            </li>
+          }
+        </ul>
+      }
     </div>
   `,
   styles: [`
-    .search-wrap {
-      position: relative;
-    }
+    .search-wrap { position: relative; }
 
     .search-field {
       display: flex;
@@ -97,14 +90,8 @@ import { GeocodingService, AddressSuggestion } from '../../services/geocoding.se
       box-shadow: 0 0 0 3px var(--color-primary-light);
     }
 
-    .search-icon {
-      color: var(--color-text-muted);
-      flex-shrink: 0;
-      transition: color var(--transition-fast);
-    }
-    .search-field--focused .search-icon {
-      color: var(--color-primary);
-    }
+    .search-icon { color: var(--color-text-muted); flex-shrink: 0; transition: color var(--transition-fast); }
+    .search-field--focused .search-icon { color: var(--color-primary); }
 
     .search-input {
       flex: 1;
@@ -117,22 +104,17 @@ import { GeocodingService, AddressSuggestion } from '../../services/geocoding.se
       outline: none;
       min-width: 0;
     }
-    .search-input::placeholder {
-      color: var(--color-text-muted);
-    }
+    .search-input::placeholder { color: var(--color-text-muted); }
 
     .clear-btn {
       background: var(--color-border);
       border: none;
       border-radius: 50%;
-      width: 20px;
-      height: 20px;
+      width: 20px; height: 20px;
       padding: 0;
       color: var(--color-text-secondary);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
       transition: background var(--transition-fast);
       -webkit-tap-highlight-color: transparent;
@@ -142,8 +124,7 @@ import { GeocodingService, AddressSuggestion } from '../../services/geocoding.se
     .suggestions {
       position: absolute;
       top: calc(100% + 6px);
-      left: 0;
-      right: 0;
+      left: 0; right: 0;
       background: var(--color-surface);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-lg);
@@ -173,11 +154,7 @@ import { GeocodingService, AddressSuggestion } from '../../services/geocoding.se
     }
     .suggestion-item:hover { background: var(--color-primary-light); }
 
-    .sug-icon {
-      color: var(--color-primary);
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
+    .sug-icon { color: var(--color-primary); flex-shrink: 0; margin-top: 1px; }
 
     .sug-label {
       line-height: 1.4;
@@ -186,47 +163,39 @@ import { GeocodingService, AddressSuggestion } from '../../services/geocoding.se
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
     }
-  `]
+  `],
 })
 export class AddressSearchComponent implements OnChanges {
   @Input() prefill: { lat: number; lon: number; label: string } | null = null;
-  @Output() locationSelected = new EventEmitter<{ lat: number; lon: number; label: string }>();
+  @Output() readonly locationSelected = new EventEmitter<{ lat: number; lon: number; label: string }>();
 
-  private geocoding = inject(GeocodingService);
-  private el = inject(ElementRef);
-  private destroyRef = inject(DestroyRef);
+  private readonly geocoding  = inject(GeocodingService);
+  private readonly el         = inject(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
-  query = '';
-  focused = false;
-  suggestions = signal<AddressSuggestion[]>([]);
-  showSuggestions = signal(false);
+  query    = '';
+  focused  = false;
 
-  private query$ = new Subject<string>();
+  readonly suggestions    = signal<AddressSuggestion[]>([]);
+  readonly showSuggestions = signal(false);
+
+  private readonly query$ = new Subject<string>();
 
   constructor() {
     this.query$.pipe(
       debounceTime(250),
       distinctUntilChanged(),
-      switchMap((q) => q.trim().length >= 3 ? this.geocoding.search(q) : of([])),
+      switchMap(q => q.trim().length >= 3 ? this.geocoding.search(q) : of([])),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe((results) => this.suggestions.set(results));
+    ).subscribe(results => this.suggestions.set(results));
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['prefill'] && this.prefill) {
+  ngOnChanges(): void {
+    if (this.prefill) {
       this.query = this.prefill.label;
       this.suggestions.set([]);
       this.showSuggestions.set(false);
     }
-  }
-
-  onFocus(): void {
-    this.focused = true;
-    this.showSuggestions.set(true);
-  }
-
-  onBlur(): void {
-    this.focused = false;
   }
 
   onQueryChange(val: string): void {

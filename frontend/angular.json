@@ -46,7 +46,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": { "buildTarget": "prix-a-la-pompe:build:production" },
-            "development": { "buildTarget": "prix-a-la-pompe:build:development" }
+            "development": {
+              "buildTarget": "prix-a-la-pompe:build:development",
+              "proxyConfig": "proxy.conf.js"
+            }
           },
           "defaultConfiguration": "development"
         },

@@ -9,7 +9,7 @@ services:
       - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD:-changeme}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
-      - "9200:9200"
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
     volumes:
       - es-data:/usr/share/elasticsearch/data
     healthcheck:
@@ -27,7 +27,7 @@ services:
     environment:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -38,7 +38,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "4200:80"
+      - "${FRONTEND_PORT:-4200}:80"
+    environment:
+      - BACKEND_URL=${BACKEND_URL:-http://backend:8000}
     depends_on:
       - backend
     restart: unless-stopped

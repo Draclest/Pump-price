@@ -205,6 +205,7 @@ async def route_recommend(
         stations=near,
         fuel_types=fuel_types,
         route_distance_km=route_distance_km,
+        max_detour_km=max_detour_km,
     )
 
     # Map internal keys

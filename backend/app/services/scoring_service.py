@@ -93,6 +93,12 @@ def score_stations(
     """
     Enrich station dicts with scoring fields and return sorted by _score desc.
 
+    Scoring rules:
+      price    60% — cheapest = 100, gap of ≥1.00 €/L vs cheapest = 0, linear in between
+      distance 35% — 0 km = 100, linear decay to 0 at radius_km
+      freshness 4% — 1.0 at <2 h, linear decay to 0.0 at ≥48 h
+      services  1% — open now / CB automate / boutique etc.
+
     Added fields:
       _score: float 0-100
       _score_breakdown: {price, distance, freshness, services}  (each 0-100)
@@ -131,37 +137,34 @@ def score_stations(
         })
 
     # ------------------------------------------------------------------
-    # 2. Normalize price and distance across the result set
+    # 2. Price anchor = cheapest in the set; distance anchor = radius_km
     # ------------------------------------------------------------------
     prices = [e["_price_raw"] for e in enriched if e["_price_raw"] is not None]
     min_price = min(prices) if prices else None
-    max_price = max(prices) if prices else None
 
-    dists = [e["_dist_km"] for e in enriched]
-    max_dist = max(dists) if dists else radius_km
-    if max_dist == 0:
-        max_dist = 1.0
+    norm_dist = max(radius_km, 0.1)
+
+    # Price gap beyond which score = 0  (1.00 €/L)
+    PRICE_ZERO_GAP = 1.0
 
     # ------------------------------------------------------------------
     # 3. Compute final score
     # ------------------------------------------------------------------
-    WEIGHT_PRICE     = 0.50
-    WEIGHT_DISTANCE  = 0.25
-    WEIGHT_FRESHNESS = 0.13
-    WEIGHT_SERVICES  = 0.12
+    WEIGHT_PRICE     = 0.60
+    WEIGHT_DISTANCE  = 0.35
+    WEIGHT_FRESHNESS = 0.04
+    WEIGHT_SERVICES  = 0.01
 
     for e in enriched:
-        # Price score — lower is better
-        if e["_price_raw"] is not None and min_price is not None and max_price is not None:
-            if max_price == min_price:
-                price_score = 100.0
-            else:
-                price_score = (1.0 - (e["_price_raw"] - min_price) / (max_price - min_price)) * 100.0
+        # Price score — cheapest = 100; gap ≥ 1 €/L = 0
+        if e["_price_raw"] is not None and min_price is not None:
+            gap = e["_price_raw"] - min_price
+            price_score = max(0.0, (1.0 - gap / PRICE_ZERO_GAP)) * 100.0
         else:
             price_score = 0.0
 
-        # Distance score — closer is better
-        distance_score = max(0.0, (1.0 - e["_dist_km"] / max_dist)) * 100.0
+        # Distance score — 0 km = 100, radius_km = 0
+        distance_score = max(0.0, (1.0 - e["_dist_km"] / norm_dist)) * 100.0
 
         freshness_score = e["_freshness_raw"] * 100.0
         services_score  = e["_services_raw"]  * 100.0
@@ -257,18 +260,15 @@ def score_stations_route(
     stations: list[dict],   # already have _route_info from routing_service
     fuel_types: list[str],
     route_distance_km: float = 0.0,  # reserved for future cost calculation
+    max_detour_km: float = 5.0,
 ) -> list[dict]:
     """
-    Scoring weights for route mode:
-      price   35%
-      detour  35%  (lower detour → higher score, normalized against max_detour in set)
-      freshness 15%
-      services  15%
-
-    Labels for top 3:
-    - Rank 1: "Meilleur prix sur le trajet"
-    - Rank 2: if detour_score highest → "Sans détour", if price_score highest → "Moins cher"
-    - Rank 3: "Bon compromis prix / détour"
+    Scoring rules for route mode:
+      price   60% — cheapest = 100, gap ≥ 1.00 €/L vs cheapest = 0, linear in between
+      detour  35% — free zone ≤ 3% of route_distance_km = 100,
+                    linear decay to 0 at max_detour_km
+      freshness 4%
+      services  1%
 
     Enriches each station with _score, _score_breakdown, _recommendation_label, _matched_fuel.
     Returns sorted by _score descending.
@@ -276,10 +276,17 @@ def score_stations_route(
     if not stations:
         return []
 
-    WEIGHT_PRICE     = 0.50
-    WEIGHT_DETOUR    = 0.25
-    WEIGHT_FRESHNESS = 0.13
-    WEIGHT_SERVICES  = 0.12
+    WEIGHT_PRICE     = 0.60
+    WEIGHT_DETOUR    = 0.35
+    WEIGHT_FRESHNESS = 0.04
+    WEIGHT_SERVICES  = 0.01
+
+    # Free-zone threshold: detours within 3% of the route are considered negligible
+    FREE_ZONE_KM = 0.03 * route_distance_km
+    # Effective scoring range: from free_zone to max_detour_km
+    norm_detour_range = max(max_detour_km - FREE_ZONE_KM, 0.1)
+    # Price gap beyond which score = 0 (1.00 €/L)
+    PRICE_ZERO_GAP = 1.0
 
     enriched: list[dict] = []
     for st in stations:
@@ -303,29 +310,24 @@ def score_stations_route(
             "_matched_fuel": matched,
         })
 
-    # Normalize price
+    # Price anchor = cheapest in the set
     prices = [e["_price_raw"] for e in enriched if e["_price_raw"] is not None]
     min_price = min(prices) if prices else None
-    max_price = max(prices) if prices else None
-
-    # Normalize detour
-    detours = [e["_detour_raw"] for e in enriched]
-    max_detour = max(detours) if detours else 1.0
-    if max_detour == 0:
-        max_detour = 1.0
 
     for e in enriched:
-        # Price score — lower is better
-        if e["_price_raw"] is not None and min_price is not None and max_price is not None:
-            if max_price == min_price:
-                price_score = 100.0
-            else:
-                price_score = (1.0 - (e["_price_raw"] - min_price) / (max_price - min_price)) * 100.0
+        # Price score — cheapest = 100; gap ≥ 1 €/L = 0
+        if e["_price_raw"] is not None and min_price is not None:
+            gap = e["_price_raw"] - min_price
+            price_score = max(0.0, (1.0 - gap / PRICE_ZERO_GAP)) * 100.0
         else:
             price_score = 0.0
 
-        # Detour score — lower detour is better
-        detour_score = max(0.0, (1.0 - e["_detour_raw"] / max_detour)) * 100.0
+        # Detour score — free zone (≤3% route) = 100, max_detour_km = 0
+        detour = e["_detour_raw"]
+        if detour <= FREE_ZONE_KM:
+            detour_score = 100.0
+        else:
+            detour_score = max(0.0, (1.0 - (detour - FREE_ZONE_KM) / norm_detour_range)) * 100.0
 
         freshness_score = e["_freshness_raw"] * 100.0
         services_score  = e["_services_raw"]  * 100.0
