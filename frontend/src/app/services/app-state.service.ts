@@ -6,7 +6,6 @@
  * binds to this service and dispatches user events.
  */
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { switchMap, of, catchError } from 'rxjs';
 
 import { GeocodingService } from './geocoding.service';
 import { GeolocationService } from './geolocation.service';
@@ -65,6 +64,10 @@ export class AppStateService {
   readonly routeCoords = computed<[number, number][] | null>(() =>
     (this.routeData()?.route?.coordinates as [number, number][] | undefined) ?? null
   );
+
+  // ── Context ───────────────────────────────────────────────────────────
+  /** HTTP + non-localhost → browser blocks geolocation */
+  readonly insecureContext = this.geoService.isInsecureContext;
 
   // ── UI ────────────────────────────────────────────────────────────────
   readonly selectedStation  = signal<Station | null>(null);

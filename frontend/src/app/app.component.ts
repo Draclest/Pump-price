@@ -39,24 +39,35 @@ import { AppStateService } from './services/app-state.service';
             <h1 class="brand-title">Pump Price</h1>
           </div>
 
-          <button class="btn-icon btn-icon--primary" type="button"
-                  [disabled]="state.locating()"
-                  title="Me localiser" aria-label="Me localiser"
-                  (click)="state.locateUser()">
-            @if (!state.locating()) {
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
-                <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
+          @if (!state.insecureContext) {
+            <button class="btn-icon btn-icon--primary" type="button"
+                    [disabled]="state.locating()"
+                    title="Me localiser" aria-label="Me localiser"
+                    (click)="state.locateUser()">
+              @if (!state.locating()) {
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+                  <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
+                </svg>
+              } @else {
+                <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+              }
+            </button>
+          } @else {
+            <span class="https-badge" title="Géolocalisation indisponible en HTTP. Utilisez HTTPS ou entrez votre adresse manuellement.">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
               </svg>
-            } @else {
-              <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-              </svg>
-            }
-          </button>
+              HTTPS requis
+            </span>
+          }
 
           <button class="btn-icon sidebar-close-btn" type="button" aria-label="Fermer la liste"
                   (click)="state.sidebarOpen.set(false)">
@@ -475,6 +486,18 @@ import { AppStateService } from './services/app-state.service';
 
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 0.8s linear infinite; }
+
+    .https-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: var(--font-size-xs); font-weight: 600;
+      color: var(--color-warning);
+      background: var(--color-warning-bg);
+      border: 1px solid var(--color-warning-border);
+      border-radius: var(--radius-pill);
+      padding: 4px 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
 
     .sidebar-close-btn { display: none; }
 

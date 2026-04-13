@@ -24,8 +24,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file: .env
-    environment:
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
