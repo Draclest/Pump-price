@@ -53,19 +53,13 @@ export class RoutingService {
   }
 
   exportToGoogleMaps(params: {
-    originLat: number;
-    originLon: number;
-    destLat: number;
-    destLon: number;
-    waypointLat: number;
-    waypointLon: number;
+    originLat: number; originLon: number;
+    destLat: number; destLon: number;
+    waypointLat: number; waypointLon: number;
   }): string {
-    return (
-      `https://www.google.com/maps/dir/?api=1` +
-      `&origin=${params.originLat},${params.originLon}` +
-      `&destination=${params.destLat},${params.destLon}` +
-      `&waypoints=${params.waypointLat},${params.waypointLon}` +
-      `&travelmode=driving`
-    );
+    const origin      = `${params.originLat},${params.originLon}`;
+    const destination = `${params.destLat},${params.destLon}`;
+    const waypoint    = `${params.waypointLat},${params.waypointLon}`;
+    return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${encodeURIComponent(waypoint)}&travelmode=driving`;
   }
 }

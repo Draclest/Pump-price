@@ -25,4 +25,19 @@ export class GeocodingService {
       )
     );
   }
+
+  reverseGeocode(lat: number, lon: number): Observable<AddressSuggestion | null> {
+    const params = new HttpParams().set('lat', String(lat)).set('lon', String(lon));
+    return this.http.get<any>('https://api-adresse.data.gouv.fr/reverse/', { params }).pipe(
+      map((res) => {
+        const f = (res.features ?? [])[0];
+        if (!f) return null;
+        return {
+          label: f.properties.label,
+          lat: f.geometry.coordinates[1],
+          lon: f.geometry.coordinates[0],
+        };
+      })
+    );
+  }
 }

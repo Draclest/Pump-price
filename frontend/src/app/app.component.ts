@@ -1,6 +1,7 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { switchMap, of, catchError } from 'rxjs';
+import { GeocodingService } from './services/geocoding.service';
 
 import { MapComponent } from './components/map/map.component';
 import { FiltersComponent } from './components/filters/filters.component';
@@ -89,21 +90,42 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
         <ng-container *ngIf="mode() === 'nearby'">
           <!-- Address search -->
           <div class="sidebar-search">
-            <app-address-search (locationSelected)="onAddressSelected($event)"></app-address-search>
+            <app-address-search
+              [prefill]="locatedPosition()"
+              (locationSelected)="onAddressSelected($event)"
+            ></app-address-search>
           </div>
 
-          <!-- Filters inline -->
+          <!-- Filters collapsible -->
           <div class="sidebar-filters">
-            <div class="sidebar-section-title">Filtres</div>
-            <app-filters
-              [values]="filters()"
-              [drawerMode]="false"
-              (changed)="onFiltersChanged($event)"
-            ></app-filters>
+            <button class="filters-toggle" (click)="filtersExpanded.set(!filtersExpanded())" type="button"
+                    [attr.aria-expanded]="filtersExpanded()">
+              <span class="filters-toggle-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="4" y1="6" x2="20" y2="6"/>
+                  <line x1="8" y1="12" x2="16" y2="12"/>
+                  <line x1="11" y1="18" x2="13" y2="18"/>
+                </svg>
+                Filtres
+              </span>
+              <svg class="filters-chevron" [class.filters-chevron--open]="filtersExpanded()"
+                   width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="filters-body" [class.filters-body--open]="filtersExpanded()">
+              <app-filters
+                [values]="filters()"
+                [drawerMode]="false"
+                (changed)="onFiltersChanged($event)"
+              ></app-filters>
+            </div>
           </div>
 
-          <!-- Error -->
-          <div class="sidebar-error" role="alert" *ngIf="error()">
+          <!-- Error — only after a search attempt -->
+          <div class="sidebar-error" role="alert" *ngIf="error() && hasSearched()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="8" x2="12" y2="12"/>
@@ -127,9 +149,9 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
           <!-- Results -->
           <ng-container *ngIf="!loading() && userLocation()">
 
-            <!-- No results -->
-            <div class="sidebar-empty" *ngIf="displayedStations().length === 0">
-              Aucune station trouvée
+            <!-- No results — only after a search -->
+            <div class="sidebar-empty" *ngIf="displayedStations().length === 0 && hasSearched()">
+              Aucune station trouv\u00e9e dans ce rayon
             </div>
 
             <!-- Top 3 -->
@@ -183,13 +205,42 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
         <ng-container *ngIf="mode() === 'route'">
           <div class="sidebar-search">
             <app-route-panel
+              [prefillOrigin]="locatedPosition()"
               (routeRequested)="onRouteRequested($event)"
               (routeCleared)="onRouteCleared()"
             ></app-route-panel>
           </div>
 
-          <!-- Route error -->
-          <div class="sidebar-error" role="alert" *ngIf="routeError()">
+          <!-- Filters collapsible (route mode) -->
+          <div class="sidebar-filters">
+            <button class="filters-toggle" (click)="filtersExpanded.set(!filtersExpanded())" type="button"
+                    [attr.aria-expanded]="filtersExpanded()">
+              <span class="filters-toggle-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="4" y1="6" x2="20" y2="6"/>
+                  <line x1="8" y1="12" x2="16" y2="12"/>
+                  <line x1="11" y1="18" x2="13" y2="18"/>
+                </svg>
+                Filtres
+              </span>
+              <svg class="filters-chevron" [class.filters-chevron--open]="filtersExpanded()"
+                   width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="filters-body" [class.filters-body--open]="filtersExpanded()">
+              <app-filters
+                [values]="filters()"
+                [drawerMode]="false"
+                (changed)="onFiltersChanged($event)"
+              ></app-filters>
+            </div>
+          </div>
+
+          <!-- Route error — only after a route has been requested -->
+          <div class="sidebar-error" role="alert" *ngIf="routeError() && hasRouteSearched()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="8" x2="12" y2="12"/>
@@ -212,6 +263,18 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
 
           <!-- Route results -->
           <ng-container *ngIf="!routeLoading() && routeData()">
+            <!-- Share button -->
+            <div class="sidebar-share-row">
+              <button class="btn-share" (click)="shareRoute()" type="button">
+                <svg *ngIf="!shareConfirm()" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+                {{ shareConfirm() ? '✓ Lien copié !' : 'Partager l\'itinéraire' }}
+              </button>
+            </div>
+
             <div class="sidebar-section-title sidebar-section-title--top3">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" aria-hidden="true">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
@@ -270,6 +333,15 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
             <span>Entrez un départ et une destination pour trouver des stations sur votre route</span>
           </div>
         </ng-container>
+
+        <!-- Ad zone — sticky bottom of sidebar -->
+        <div class="ad-zone" aria-label="Espace publicitaire">
+          <span class="ad-zone__label">Annonce</span>
+          <div class="ad-zone__slot">
+            <!-- 320×80 ad slot — replace with actual ad tag -->
+            <span class="ad-zone__placeholder">Espace publicitaire</span>
+          </div>
+        </div>
 
       </aside>
 
@@ -331,7 +403,6 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
       z-index: 20;
       overflow-y: auto;
       overflow-x: hidden;
-      gap: var(--space-1);
     }
 
     /* ── Mode Tabs ── */
@@ -451,12 +522,49 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
     }
 
     .sidebar-filters {
-      padding: var(--space-3) var(--space-4);
       border-bottom: 1px solid var(--color-border-subtle);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-3);
       flex-shrink: 0;
+    }
+
+    .filters-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-4);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-family);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .filters-toggle:hover { background: var(--color-surface-3); }
+
+    .filters-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .filters-chevron {
+      color: var(--color-text-muted);
+      transition: transform var(--transition-fast);
+    }
+    .filters-chevron--open {
+      transform: rotate(180deg);
+    }
+
+    .filters-body {
+      display: none;
+      padding: 0 var(--space-4) var(--space-3);
+    }
+    .filters-body--open {
+      display: block;
     }
 
     .sidebar-section-title {
@@ -522,6 +630,30 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
       width: 32px;
       height: 32px;
     }
+
+    /* ── Share row ── */
+    .sidebar-share-row {
+      padding: var(--space-2) var(--space-4) 0;
+    }
+
+    .btn-share {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 9px var(--space-4);
+      background: var(--color-accent-blue-bg);
+      border: 1.5px solid var(--color-accent-blue-border);
+      border-radius: var(--radius-md);
+      color: var(--color-accent-blue);
+      font-size: var(--font-size-sm);
+      font-family: var(--font-family);
+      font-weight: 700;
+      cursor: pointer;
+      justify-content: center;
+      transition: all var(--transition-fast);
+    }
+    .btn-share:active { opacity: 0.8; transform: scale(0.98); }
 
     /* ── Map area ── */
     .map-area {
@@ -603,6 +735,39 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
       animation: shimmer 1.5s infinite;
     }
 
+    /* ── Ad zone ── */
+    .ad-zone {
+      margin-top: auto;
+      padding: var(--space-3) var(--space-4);
+      border-top: 1px solid var(--color-border-subtle);
+      flex-shrink: 0;
+    }
+
+    .ad-zone__label {
+      display: block;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--color-text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 5px;
+    }
+
+    .ad-zone__slot {
+      min-height: 80px;
+      border-radius: var(--radius-md);
+      background: var(--color-surface-3);
+      border: 1px dashed var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ad-zone__placeholder {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-tertiary);
+    }
+
     /* ── Mobile responsive (≤768px) ── */
     @media (max-width: 768px) {
       .app-shell {
@@ -644,11 +809,12 @@ import { FUEL_LABELS, FilterValues, Station } from './models/station.model';
     }
   `]
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   readonly fuelLabels = FUEL_LABELS;
   private stationService = inject(StationService);
   private geolocationService = inject(GeolocationService);
   private routingService = inject(RoutingService);
+  private geocodingService = inject(GeocodingService);
 
   // Mode
   mode = signal<'nearby' | 'route'>('nearby');
@@ -665,6 +831,14 @@ export class AppComponent {
   sidebarOpen = signal(false);
   hoveredStationId = signal<string | null>(null);
 
+  // UI state
+  filtersExpanded = signal(true);
+  hasSearched     = signal(false);  // true after first nearby search attempt
+  hasRouteSearched = signal(false); // true after first route search attempt
+
+  // Geoloc result shared between modes
+  locatedPosition = signal<{ lat: number; lon: number; label: string } | null>(null);
+
   private _allStations = signal<Station[]>([]);
 
   displayedStations = computed(() => this._allStations());
@@ -673,11 +847,13 @@ export class AppComponent {
   top3Ids = computed(() => this.top3().map(s => s.id));
 
   // Route mode
-  routeData    = signal<{ route: RouteGeometry; stations: Station[] } | null>(null);
-  routeOrigin  = signal<{ lat: number; lon: number; label: string } | null>(null);
-  routeDest    = signal<{ lat: number; lon: number; label: string } | null>(null);
-  routeLoading = signal(false);
-  routeError   = signal<string | null>(null);
+  routeData       = signal<{ route: RouteGeometry; stations: Station[] } | null>(null);
+  routeOrigin     = signal<{ lat: number; lon: number; label: string } | null>(null);
+  routeDest       = signal<{ lat: number; lon: number; label: string } | null>(null);
+  routeLoading    = signal(false);
+  routeError      = signal<string | null>(null);
+  shareConfirm    = signal(false);
+  routeMaxDetour  = signal(5);
 
   routeStations   = computed(() => this.routeData()?.stations ?? []);
   routeTop3        = computed(() => this.routeStations().slice(0, 3));
@@ -692,6 +868,34 @@ export class AppComponent {
     this.mode() === 'route' ? this.routeStations() : this.displayedStations()
   );
 
+  ngOnInit(): void {
+    const search = window.location.search;
+    if (!search) return;
+    const params = new URLSearchParams(search);
+    if (params.get('mode') !== 'route') return;
+
+    const olat   = parseFloat(params.get('olat')   ?? '');
+    const olon   = parseFloat(params.get('olon')   ?? '');
+    const olabel = params.get('olabel') ?? '';
+    const dlat   = parseFloat(params.get('dlat')   ?? '');
+    const dlon   = parseFloat(params.get('dlon')   ?? '');
+    const dlabel = params.get('dlabel') ?? '';
+    const fuel   = params.get('fuel')   ?? 'E10';
+    const radius = parseInt(params.get('radius') ?? '10', 10);
+    const detour = parseInt(params.get('detour') ?? '5',  10);
+
+    if (isNaN(olat) || isNaN(olon) || isNaN(dlat) || isNaN(dlon)) return;
+
+    this.mode.set('route');
+    this.routeMaxDetour.set(detour);
+    this.filters.set({ ...this.filters(), fuelType: fuel as any, radiusKm: radius });
+    this.onRouteRequested({
+      origin: olabel, originLat: olat, originLon: olon,
+      destination: dlabel, destLat: dlat, destLon: dlon,
+      maxDetourKm: detour,
+    });
+  }
+
   trackById(_: number, s: Station): string { return s.id; }
 
   locateUser(): void {
@@ -700,9 +904,23 @@ export class AppComponent {
     this.geolocationService.getCurrentPosition().subscribe({
       next: (pos) => {
         this.locating.set(false);
-        this.locationLabel.set(null);
         this.userLocation.set(pos);
-        this._fetchStations(pos.lat, pos.lon);
+        // Reverse-geocode to get a readable label, then populate active mode's address field
+        this.geocodingService.reverseGeocode(pos.lat, pos.lon).subscribe({
+          next: (result) => {
+            const label = result?.label ?? `${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)}`;
+            this.locationLabel.set(label);
+            this.locatedPosition.set({ lat: pos.lat, lon: pos.lon, label });
+          },
+          error: () => {
+            const label = 'Ma position';
+            this.locationLabel.set(label);
+            this.locatedPosition.set({ lat: pos.lat, lon: pos.lon, label });
+          },
+        });
+        if (this.mode() === 'nearby') {
+          this._fetchStations(pos.lat, pos.lon);
+        }
       },
       error: (err) => {
         this.error.set(err.message);
@@ -720,6 +938,7 @@ export class AppComponent {
   private _fetchStations(lat: number, lon: number): void {
     this.loading.set(true);
     this.error.set(null);
+    this.hasSearched.set(true);
     const f = this.filters();
     this.stationService.recommendStations({
       lat,
@@ -763,6 +982,7 @@ export class AppComponent {
     this.routeLoading.set(true);
     this.routeError.set(null);
     this.routeData.set(null);
+    this.hasRouteSearched.set(true);
     this.routeOrigin.set({ lat: req.originLat, lon: req.originLon, label: req.origin });
     this.routeDest.set({ lat: req.destLat, lon: req.destLon, label: req.destination });
 
@@ -794,6 +1014,29 @@ export class AppComponent {
     this.routeOrigin.set(null);
     this.routeDest.set(null);
     this.routeError.set(null);
+  }
+
+  shareRoute(): void {
+    const origin = this.routeOrigin();
+    const dest   = this.routeDest();
+    if (!origin || !dest) return;
+    const params = new URLSearchParams({
+      mode:    'route',
+      olat:    String(origin.lat),
+      olon:    String(origin.lon),
+      olabel:  origin.label,
+      dlat:    String(dest.lat),
+      dlon:    String(dest.lon),
+      dlabel:  dest.label,
+      fuel:    this.filters().fuelType,
+      radius:  String(this.filters().radiusKm),
+      detour:  String(this.routeMaxDetour()),
+    });
+    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.shareConfirm.set(true);
+      setTimeout(() => this.shareConfirm.set(false), 2500);
+    });
   }
 
   openGoogleMaps(station: Station): void {

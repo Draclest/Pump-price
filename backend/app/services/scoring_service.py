@@ -145,10 +145,10 @@ def score_stations(
     # ------------------------------------------------------------------
     # 3. Compute final score
     # ------------------------------------------------------------------
-    WEIGHT_PRICE     = 0.40
-    WEIGHT_DISTANCE  = 0.30
-    WEIGHT_FRESHNESS = 0.15
-    WEIGHT_SERVICES  = 0.15
+    WEIGHT_PRICE     = 0.50
+    WEIGHT_DISTANCE  = 0.25
+    WEIGHT_FRESHNESS = 0.13
+    WEIGHT_SERVICES  = 0.12
 
     for e in enriched:
         # Price score — lower is better
@@ -192,13 +192,10 @@ def score_stations(
     top3 = enriched[:3]
 
     # Find who is actually cheapest / closest / most open among top 3
-    cheapest_id  = min(top3, key=lambda e: e["_score_breakdown"]["price"] * -1)["id"]   # highest price_score
+    cheapest_id  = min(top3, key=lambda e: e["_score_breakdown"]["price"] * -1)["id"]
     closest_id   = min(top3, key=lambda e: e["_score_breakdown"]["distance"] * -1)["id"]
-    freshest_id  = min(top3, key=lambda e: e["_score_breakdown"]["freshness"] * -1)["id"]
     best_svc_id  = min(top3, key=lambda e: e["_score_breakdown"]["services"] * -1)["id"]
     is_open_ids  = {e["id"] for e in top3 if e.get("is_open") is True}
-
-    assigned: set[str] = set()
 
     def _pick_label(e: dict) -> str:
         sid = e["id"]
@@ -259,7 +256,7 @@ def score_stations(
 def score_stations_route(
     stations: list[dict],   # already have _route_info from routing_service
     fuel_types: list[str],
-    route_distance_km: float,
+    route_distance_km: float = 0.0,  # reserved for future cost calculation
 ) -> list[dict]:
     """
     Scoring weights for route mode:
@@ -279,10 +276,10 @@ def score_stations_route(
     if not stations:
         return []
 
-    WEIGHT_PRICE     = 0.35
-    WEIGHT_DETOUR    = 0.35
-    WEIGHT_FRESHNESS = 0.15
-    WEIGHT_SERVICES  = 0.15
+    WEIGHT_PRICE     = 0.50
+    WEIGHT_DETOUR    = 0.25
+    WEIGHT_FRESHNESS = 0.13
+    WEIGHT_SERVICES  = 0.12
 
     enriched: list[dict] = []
     for st in stations:

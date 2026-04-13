@@ -280,9 +280,9 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
     }
     .chip:active { transform: scale(0.95); }
     .chip--active {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-      color: var(--color-text-on-primary);
+      background: var(--color-accent-blue-bg);
+      border-color: var(--color-accent-blue);
+      color: var(--color-accent-blue);
     }
 
     /* Slider */

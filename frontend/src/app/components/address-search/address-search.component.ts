@@ -1,6 +1,6 @@
 import {
-  Component, EventEmitter, Output, inject,
-  signal, ElementRef, HostListener, DestroyRef
+  Component, EventEmitter, Output, Input, inject,
+  signal, ElementRef, HostListener, DestroyRef, OnChanges, SimpleChanges
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -188,7 +188,8 @@ import { GeocodingService, AddressSuggestion } from '../../services/geocoding.se
     }
   `]
 })
-export class AddressSearchComponent {
+export class AddressSearchComponent implements OnChanges {
+  @Input() prefill: { lat: number; lon: number; label: string } | null = null;
   @Output() locationSelected = new EventEmitter<{ lat: number; lon: number; label: string }>();
 
   private geocoding = inject(GeocodingService);
@@ -209,6 +210,14 @@ export class AddressSearchComponent {
       switchMap((q) => q.trim().length >= 3 ? this.geocoding.search(q) : of([])),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe((results) => this.suggestions.set(results));
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['prefill'] && this.prefill) {
+      this.query = this.prefill.label;
+      this.suggestions.set([]);
+      this.showSuggestions.set(false);
+    }
   }
 
   onFocus(): void {
