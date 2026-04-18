@@ -11,7 +11,7 @@ from app.services.scoring_service import (
     haversine_km,
     score_stations,
     score_stations_route,
-    _freshness_score,
+    _fraicheur_score,
     _services_score,
 )
 
@@ -28,32 +28,32 @@ def test_haversine_paris_lyon():
     assert 380 < dist < 400
 
 
-# ── _freshness_score ──────────────────────────────────────────────────────────
+# ── _fraicheur_score ──────────────────────────────────────────────────────────
 
 def _ts(hours_ago: float) -> str:
     dt = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
     return dt.isoformat()
 
 
-def test_freshness_under_2h_is_1():
-    assert _freshness_score(_ts(1)) == pytest.approx(1.0)
+def test_fraicheur_fresh_data_is_1():
+    assert _fraicheur_score(_ts(0)) == pytest.approx(1.0, abs=0.01)
 
 
-def test_freshness_at_48h_is_0():
-    assert _freshness_score(_ts(48)) == pytest.approx(0.0)
+def test_fraicheur_at_168h_is_0():
+    assert _fraicheur_score(_ts(168)) == pytest.approx(0.0, abs=0.01)
 
 
-def test_freshness_between_2h_and_48h_is_linear():
-    score = _freshness_score(_ts(25))  # midpoint ≈ 0.5
-    assert 0.0 < score < 1.0
+def test_fraicheur_at_84h_is_half():
+    score = _fraicheur_score(_ts(84))  # midpoint = 0.5
+    assert score == pytest.approx(0.5, abs=0.01)
 
 
-def test_freshness_none_returns_0():
-    assert _freshness_score(None) == 0.0
+def test_fraicheur_none_returns_0():
+    assert _fraicheur_score(None) == 0.0
 
 
-def test_freshness_invalid_string_returns_0():
-    assert _freshness_score("not-a-date") == 0.0
+def test_fraicheur_invalid_string_returns_0():
+    assert _fraicheur_score("not-a-date") == 0.0
 
 
 # ── _services_score ───────────────────────────────────────────────────────────

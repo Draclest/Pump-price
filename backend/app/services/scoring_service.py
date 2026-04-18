@@ -1,6 +1,6 @@
 """
 Scoring and recommendation service for fuel stations.
-Rates stations 0-100 combining price, distance, freshness, and services.
+Rates stations 0-100 combining price, distance, fraicheur, and services.
 """
 from __future__ import annotations
 
@@ -23,8 +23,8 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def _freshness_score(updated_at: datetime | str | None) -> float:
-    """Return 0.0-1.0 freshness: 1.0 if <2h old, linear decay to 0 at 48h."""
+def _fraicheur_score(updated_at: datetime | str | None) -> float:
+    """Return 0.0-1.0 fraîcheur: 1.0 si < 1h, décroit linéairement jusqu'à 0 à 168h (7 jours)."""
     if updated_at is None:
         return 0.0
     if isinstance(updated_at, str):
@@ -36,11 +36,7 @@ def _freshness_score(updated_at: datetime | str | None) -> float:
     if updated_at.tzinfo is None:
         updated_at = updated_at.replace(tzinfo=timezone.utc)
     age_hours = (now - updated_at).total_seconds() / 3600.0
-    if age_hours <= 2.0:
-        return 1.0
-    if age_hours >= 48.0:
-        return 0.0
-    return 1.0 - (age_hours - 2.0) / 46.0
+    return max(0.0, 1.0 - age_hours / 168.0)
 
 
 def _services_score(station: dict) -> float:
@@ -96,12 +92,12 @@ def score_stations(
     Scoring rules:
       price    60% — cheapest = 100, gap of ≥1.00 €/L vs cheapest = 0, linear in between
       distance 35% — 0 km = 100, linear decay to 0 at radius_km
-      freshness 4% — 1.0 at <2 h, linear decay to 0.0 at ≥48 h
+      fraicheur 4% — 1.0 à 0h, décroit linéairement jusqu'à 0 à 168h (7 jours)
       services  1% — open now / CB automate / boutique etc.
 
     Added fields:
       _score: float 0-100
-      _score_breakdown: {price, distance, freshness, services}  (each 0-100)
+      _score_breakdown: {price, distance, fraicheur, services}  (each 0-100)
       _recommendation_label: str | None
       _matched_fuel: dict | None
     """
@@ -122,7 +118,7 @@ def score_stations(
         freshness = 0.0
         price_raw: Optional[float] = None
         if matched:
-            freshness = _freshness_score(matched.get("updated_at"))
+            freshness = _fraicheur_score(matched.get("updated_at"))
             price_raw = matched.get("price")
 
         services_raw = _services_score(st)
@@ -152,7 +148,7 @@ def score_stations(
     # ------------------------------------------------------------------
     WEIGHT_PRICE     = 0.60
     WEIGHT_DISTANCE  = 0.35
-    WEIGHT_FRESHNESS = 0.04
+    WEIGHT_FRAICHEUR = 0.04
     WEIGHT_SERVICES  = 0.01
 
     for e in enriched:
@@ -166,13 +162,13 @@ def score_stations(
         # Distance score — 0 km = 100, radius_km = 0
         distance_score = max(0.0, (1.0 - e["_dist_km"] / norm_dist)) * 100.0
 
-        freshness_score = e["_freshness_raw"] * 100.0
+        fraicheur_score = e["_freshness_raw"] * 100.0
         services_score  = e["_services_raw"]  * 100.0
 
         total = (
             WEIGHT_PRICE     * price_score
             + WEIGHT_DISTANCE  * distance_score
-            + WEIGHT_FRESHNESS * freshness_score
+            + WEIGHT_FRAICHEUR * fraicheur_score
             + WEIGHT_SERVICES  * services_score
         )
 
@@ -180,7 +176,7 @@ def score_stations(
         e["_score_breakdown"] = {
             "price":     round(price_score, 1),
             "distance":  round(distance_score, 1),
-            "freshness": round(freshness_score, 1),
+            "fraicheur": round(fraicheur_score, 1),
             "services":  round(services_score, 1),
         }
 
@@ -235,7 +231,7 @@ def score_stations(
                 label = {
                     "price":     "Bon prix",
                     "distance":  "À deux pas",
-                    "freshness": "Données fraîches",
+                    "fraicheur": "Données fraîches",
                     "services":  "Services complets",
                 }.get(second, "Bon compromis")
             e["_recommendation_label"] = label
@@ -278,7 +274,7 @@ def score_stations_route(
 
     WEIGHT_PRICE     = 0.60
     WEIGHT_DETOUR    = 0.35
-    WEIGHT_FRESHNESS = 0.04
+    WEIGHT_FRAICHEUR = 0.04
     WEIGHT_SERVICES  = 0.01
 
     # Free-zone threshold: detours within 3% of the route are considered negligible
@@ -294,7 +290,7 @@ def score_stations_route(
         freshness = 0.0
         price_raw: Optional[float] = None
         if matched:
-            freshness = _freshness_score(matched.get("updated_at"))
+            freshness = _fraicheur_score(matched.get("updated_at"))
             price_raw = matched.get("price")
 
         services_raw = _services_score(st)
@@ -329,13 +325,13 @@ def score_stations_route(
         else:
             detour_score = max(0.0, (1.0 - (detour - FREE_ZONE_KM) / norm_detour_range)) * 100.0
 
-        freshness_score = e["_freshness_raw"] * 100.0
+        fraicheur_score = e["_freshness_raw"] * 100.0
         services_score  = e["_services_raw"]  * 100.0
 
         total = (
             WEIGHT_PRICE     * price_score
             + WEIGHT_DETOUR    * detour_score
-            + WEIGHT_FRESHNESS * freshness_score
+            + WEIGHT_FRAICHEUR * fraicheur_score
             + WEIGHT_SERVICES  * services_score
         )
 
@@ -343,7 +339,7 @@ def score_stations_route(
         e["_score_breakdown"] = {
             "price":     round(price_score, 1),
             "detour":    round(detour_score, 1),
-            "freshness": round(freshness_score, 1),
+            "fraicheur": round(fraicheur_score, 1),
             "services":  round(services_score, 1),
         }
 
@@ -384,7 +380,7 @@ def score_stations_route(
             lbl = {
                 "price":     "Bon prix",
                 "detour":    "Sans détour",
-                "freshness": "Données fraîches",
+                "fraicheur": "Données fraîches",
                 "services":  "Services complets",
             }.get(second, "Bon compromis prix / détour")
         e["_recommendation_label"] = lbl

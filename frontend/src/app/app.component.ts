@@ -389,6 +389,18 @@ import { IngestionStatusService } from './services/ingestion-status.service';
           }
         }
 
+        <!-- Dernière collecte des données -->
+        @if (ingestionStatus.state().finished_at) {
+          <div class="data-freshness" title="Dernière collecte des données depuis data.gouv.fr et OpenStreetMap">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Données collectées {{ formatRelativeTime(ingestionStatus.state().finished_at) }}
+          </div>
+        }
+
         <!-- Ad zone — sticky bottom via margin-top: auto -->
         <div class="ad-zone" aria-label="Espace publicitaire">
           <span class="ad-zone__label">Annonce</span>
@@ -681,6 +693,16 @@ import { IngestionStatusService } from './services/ingestion-status.service';
     }
     .ad-zone__placeholder { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
 
+    /* ── Data freshness footer ── */
+    .data-freshness {
+      display: flex; align-items: center; gap: 5px;
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--font-size-xs); color: var(--color-text-tertiary);
+      border-top: 1px solid var(--color-border-subtle);
+      flex-shrink: 0;
+    }
+    .data-freshness svg { flex-shrink: 0; opacity: 0.6; }
+
     /* ── Ingestion banner ── */
     .ingestion-banner {
       position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
@@ -721,5 +743,17 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.state.restoreFromUrl();
     this.ingestionStatus.startPolling();
+  }
+
+  formatRelativeTime(isoDate: string | null): string {
+    if (!isoDate) return '';
+    const diff = Date.now() - new Date(isoDate).getTime();
+    const minutes = Math.floor(diff / 60_000);
+    if (minutes < 1)  return "il y a quelques secondes";
+    if (minutes < 60) return `il y a ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24)   return `il y a ${hours} h`;
+    const days = Math.floor(hours / 24);
+    return `il y a ${days} j`;
   }
 }
