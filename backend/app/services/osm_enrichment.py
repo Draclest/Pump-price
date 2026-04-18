@@ -13,6 +13,7 @@ Matching (cross-reference):
   - OSM-only stations (no gov match) are also returned for indexing
 """
 
+import asyncio
 import logging
 import math
 from datetime import datetime, timezone
@@ -25,17 +26,22 @@ logger = logging.getLogger(__name__)
 # France bounding box (south, west, north, east) for Overpass
 _BBOX = (41.3, -5.6, 51.2, 9.7)
 
-OVERPASS_URL     = "https://overpass-api.de/api/interpreter"
 OVERPASS_TIMEOUT = 180   # seconds — France-wide query needs generous time
 MATCH_RADIUS_M   = 150   # metres — slightly wider to catch imprecise coordinates
 _GRID_PREC       = 0.01  # degrees ≈ 1 km
 
-# Mirror used if primary Overpass is slow
+# Mirrors tried in order — public Overpass instances require a User-Agent.
 _OVERPASS_MIRRORS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
 ]
+
+# Overpass instances block requests without a recognisable User-Agent.
+_HEADERS = {
+    "User-Agent": "PrixAlaPompe/1.0 (fuel price comparison app; contact@example.com)",
+    "Accept": "application/json",
+}
 
 
 # ── Spatial helpers ────────────────────────────────────────────────────────────
@@ -99,7 +105,7 @@ async def _run_overpass(query: str, timeout: int = OVERPASS_TIMEOUT) -> list[dic
 
     for url in _OVERPASS_MIRRORS:
         try:
-            async with httpx.AsyncClient(timeout=float(timeout + 30)) as client:
+            async with httpx.AsyncClient(timeout=float(timeout + 30), headers=_HEADERS) as client:
                 resp = await client.post(url, data={"data": query})
                 resp.raise_for_status()
                 data = resp.json()
@@ -108,13 +114,16 @@ async def _run_overpass(query: str, timeout: int = OVERPASS_TIMEOUT) -> list[dic
                 parsed = _parse_osm_element(el, fetched_at)
                 if parsed:
                     result.append(parsed)
-            logger.debug("Overpass OK via %s: %d elements", url, len(result))
+            logger.info("Overpass OK via %s: %d elements", url, len(result))
             return result
         except Exception as exc:
-            logger.warning("Overpass %s failed: %s — trying next mirror", url, exc)
+            logger.info("Overpass mirror %s unavailable (%s) — trying next", url, exc)
             last_exc = exc
 
-    logger.error("All Overpass mirrors failed: %s", last_exc)
+    logger.error(
+        "All Overpass mirrors failed — OSM enrichment skipped. "
+        "Stations will be indexed with gov data only. Last error: %s", last_exc,
+    )
     return []
 
 

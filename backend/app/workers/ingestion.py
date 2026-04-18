@@ -25,6 +25,7 @@ from app.config import settings
 from app.services import gov_client, osm_enrichment
 from app.services.brand_logos import get_logo_url, get_brand_color
 from app.services.opening_hours import is_open_now, format_opening_hours
+from app.services.ingestion_state import ingestion_state
 
 logger = logging.getLogger(__name__)
 
@@ -119,9 +120,24 @@ async def _cleanup_old_history(es: AsyncElasticsearch, keep_days: int) -> int:
 
 
 async def run_ingestion(es: AsyncElasticsearch) -> dict:
+    # Prevent concurrent ingestion runs
+    if ingestion_state.status == "running":
+        logger.warning("Ingestion already running — skipping")
+        return {"skipped": True, "reason": "already running"}
+
+    ingestion_state.start()
     start = datetime.now(timezone.utc)
     logger.info("=== Ingestion started ===")
 
+    try:
+        return await _run_ingestion_inner(es, start)
+    except Exception as exc:
+        ingestion_state.fail(str(exc))
+        logger.error("=== Ingestion FAILED: %s ===", exc)
+        raise
+
+
+async def _run_ingestion_inner(es: AsyncElasticsearch, start: datetime) -> dict:
     await ensure_index(es)
     await ensure_history_index(es)
 
@@ -130,10 +146,13 @@ async def run_ingestion(es: AsyncElasticsearch) -> dict:
     osm_task = asyncio.create_task(osm_enrichment.fetch_all_france())
 
     gov_stations, osm_stations = await asyncio.gather(gov_task, osm_task)
-    logger.info(
-        "Fetched: gov=%d osm=%d",
-        len(gov_stations), len(osm_stations),
-    )
+
+    if not osm_stations:
+        logger.warning(
+            "OSM fetch returned 0 stations — indexing with gov data only "
+            "(no opening hours / services enrichment)."
+        )
+    logger.info("Fetched: gov=%d osm=%d", len(gov_stations), len(osm_stations))
 
     # ── Step 3 : cross-reference ───────────────────────────────────────────────
     enriched_gov, osm_only = osm_enrichment.cross_reference(gov_stations, osm_stations)
@@ -178,15 +197,16 @@ async def run_ingestion(es: AsyncElasticsearch) -> dict:
 
     elapsed = (datetime.now(timezone.utc) - start).total_seconds()
     result = {
-        "gov_fetched":        len(gov_stations),
-        "osm_fetched":        len(osm_stations),
-        "gov_enriched":       len(enriched_gov),
-        "osm_only":           len(osm_only),
-        "total_indexed":      len(all_stations) - error_count,
-        "bulk_errors":        error_count,
-        "history_indexed":    history_indexed,
+        "gov_fetched":             len(gov_stations),
+        "osm_fetched":             len(osm_stations),
+        "gov_enriched":            len(enriched_gov),
+        "osm_only":                len(osm_only),
+        "total_indexed":           len(all_stations) - error_count,
+        "bulk_errors":             error_count,
+        "history_indexed":         history_indexed,
         "history_cleanup_deleted": history_deleted,
-        "duration_seconds":   round(elapsed, 2),
+        "duration_seconds":        round(elapsed, 2),
     }
+    ingestion_state.complete(result)
     logger.info("=== Ingestion complete: %s ===", result)
     return result

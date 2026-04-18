@@ -81,7 +81,9 @@ def get_es_client() -> AsyncElasticsearch:
     return AsyncElasticsearch(
         hosts=[settings.elasticsearch_url],
         basic_auth=(settings.elasticsearch_username, settings.elasticsearch_password),
-        verify_certs=False,
+        # verify_certs is False by default for local/Docker setups (self-signed certs).
+        # Set ELASTICSEARCH_VERIFY_CERTS=true in production with a trusted CA.
+        verify_certs=settings.elasticsearch_verify_certs,
         request_timeout=10,
     )
 

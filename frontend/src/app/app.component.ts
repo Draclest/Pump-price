@@ -7,6 +7,7 @@ import { AddressSearchComponent } from './components/address-search/address-sear
 import { PriceHistoryComponent } from './components/price-history/price-history.component';
 import { RoutePanelComponent } from './components/route-panel/route-panel.component';
 import { AppStateService } from './services/app-state.service';
+import { IngestionStatusService } from './services/ingestion-status.service';
 
 @Component({
   selector: 'app-root',
@@ -21,6 +22,22 @@ import { AppStateService } from './services/app-state.service';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!-- ── Ingestion banner — shown while initial data load is in progress ── -->
+    @if (ingestionStatus.isLoading()) {
+      <div class="ingestion-banner" role="status" aria-live="polite">
+        <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Chargement des données en cours… cela peut prendre quelques minutes lors du premier démarrage.
+      </div>
+    }
+    @if (ingestionStatus.state().status === 'error') {
+      <div class="ingestion-banner ingestion-banner--error" role="alert">
+        ⚠ Erreur lors du chargement des données : {{ ingestionStatus.state().error }}
+      </div>
+    }
+
     <div class="app-shell">
 
       <!-- ── Left Sidebar ── -->
@@ -664,6 +681,18 @@ import { AppStateService } from './services/app-state.service';
     }
     .ad-zone__placeholder { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
 
+    /* ── Ingestion banner ── */
+    .ingestion-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+      background: var(--color-primary); color: #fff;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 8px 16px; font-size: var(--font-size-sm); font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .ingestion-banner--error {
+      background: var(--color-error);
+    }
+
     /* ── Mobile (≤768px) ── */
     @media (max-width: 768px) {
       .app-shell { flex-direction: column; }
@@ -686,10 +715,11 @@ import { AppStateService } from './services/app-state.service';
   `],
 })
 export class AppComponent implements OnInit {
-  /** Expose the service directly to the template — no forwarding methods needed. */
-  readonly state = inject(AppStateService);
+  readonly state           = inject(AppStateService);
+  readonly ingestionStatus = inject(IngestionStatusService);
 
   ngOnInit(): void {
     this.state.restoreFromUrl();
+    this.ingestionStatus.startPolling();
   }
 }

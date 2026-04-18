@@ -177,11 +177,31 @@ def parse_records_to_stations(records: list[dict]) -> list[dict]:
         except ValueError:
             updated_at = datetime.now(timezone.utc)
 
-        grouped[sid]["fuels"].append({
-            "type":       str(prix_nom),
+        fuel_type = str(prix_nom)
+        new_fuel = {
+            "type":       fuel_type,
             "price":      float(prix_valeur),
             "updated_at": updated_at.isoformat(),
-        })
+        }
+
+        # Deduplicate: keep only the most recent entry per fuel type.
+        # The gov dataset sometimes sends multiple records for the same
+        # (station, fuel_type) — e.g. successive price updates in the same export.
+        existing_fuels: list[dict] = grouped[sid]["fuels"]
+        existing_idx = next(
+            (i for i, f in enumerate(existing_fuels) if f["type"] == fuel_type),
+            None,
+        )
+        if existing_idx is None:
+            existing_fuels.append(new_fuel)
+        else:
+            # Keep the entry with the more recent updated_at
+            existing = existing_fuels[existing_idx]
+            try:
+                if updated_at.isoformat() > existing["updated_at"]:
+                    existing_fuels[existing_idx] = new_fuel
+            except Exception:
+                existing_fuels[existing_idx] = new_fuel
 
     return list(grouped.values())
 

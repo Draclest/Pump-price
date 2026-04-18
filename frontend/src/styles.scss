@@ -1,15 +1,15 @@
 @import 'leaflet/dist/leaflet.css';
 
-/* ─── Design Tokens ─────────────────────────────────────────────── */
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  /* Brand green — used sparingly for CTAs and key indicators */
-  --color-primary:        #15803d;   /* WCAG AA on white (5.6:1) */
-  --color-primary-dark:   #166534;
+  /* Brand green */
+  --color-primary:        #16a34a;
+  --color-primary-dark:   #15803d;
   --color-primary-light:  #dcfce7;
   --color-primary-muted:  #bbf7d0;
-  --color-primary-subtle: #f0fdf4;   /* very light tint for hover states */
+  --color-primary-subtle: #f0fdf4;
 
-  /* Neutrals — the dominant UI palette */
+  /* Surface hierarchy */
   --color-bg:             #f8fafc;
   --color-surface:        #ffffff;
   --color-surface-2:      #f8fafc;
@@ -19,39 +19,39 @@
   --color-border-subtle:  #f1f5f9;
   --color-border-subtle-2:#e2e8f0;
 
-  /* Text — high-contrast slate scale */
-  --color-text-primary:   #0f172a;   /* 18.1:1 on white */
-  --color-text-secondary: #475569;   /* 7.1:1 on white — AA large & AA normal */
-  --color-text-muted:     #64748b;   /* 4.6:1 on white — AA normal */
-  --color-text-tertiary:  #94a3b8;   /* decorative only, not for body copy */
+  /* Text — slate scale, WCAG AA */
+  --color-text-primary:   #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #64748b;
+  --color-text-tertiary:  #94a3b8;
   --color-text-on-primary:#ffffff;
   --color-text-on-dark:   #ffffff;
 
-  /* Accent — blue for filters/chips (not green) */
-  --color-accent-blue:        #1d4ed8;   /* 7.7:1 on white */
+  /* Accent blue */
+  --color-accent-blue:        #1d4ed8;
   --color-accent-blue-bg:     #eff6ff;
   --color-accent-blue-border: #bfdbfe;
   --color-accent-blue-text:   #1e40af;
 
   /* Semantic */
-  --color-error:          #dc2626;   /* 5.8:1 on white */
+  --color-error:          #dc2626;
   --color-error-bg:       #fef2f2;
-  --color-warning:        #b45309;   /* 5.0:1 on white (amber darkened) */
+  --color-warning:        #b45309;
   --color-warning-bg:     #fffbeb;
   --color-warning-border: #fde68a;
   --color-success:        #15803d;
   --color-success-bg:     #f0fdf4;
 
-  /* Price indicator colors */
-  --color-price-good:     #15803d;   /* cheapest */
-  --color-price-mid:      #b45309;   /* middle */
-  --color-price-high:     #dc2626;   /* most expensive */
+  /* Price indicators */
+  --color-price-good:     #15803d;
+  --color-price-mid:      #b45309;
+  --color-price-high:     #dc2626;
 
   /* Shadows */
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md:   0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
-  --shadow-lg:   0 10px 30px rgba(0,0,0,0.10), 0 4px 10px rgba(0,0,0,0.05);
-  --shadow-sheet:0 -4px 24px rgba(0,0,0,0.10), 0 -1px 4px rgba(0,0,0,0.05);
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md:    0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-lg:    0 10px 30px rgba(0,0,0,0.10), 0 4px 10px rgba(0,0,0,0.05);
+  --shadow-sheet: 0 -4px 24px rgba(0,0,0,0.10), 0 -1px 4px rgba(0,0,0,0.05);
 
   /* Radius */
   --radius-sm:  6px;
@@ -83,7 +83,7 @@
   --transition-slow:   350ms ease;
 }
 
-/* ─── Reset ──────────────────────────────────────────────────────── */
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -101,7 +101,14 @@ html, body {
   color: var(--color-text-primary);
 }
 
-/* ─── Leaflet overrides ──────────────────────────────────────────── */
+/* ─── Focus ring (accessibilité) ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ─── Leaflet overrides ──────────────────────────────────────────────────── */
 .leaflet-container {
   font-family: var(--font-family);
 }
@@ -122,14 +129,16 @@ html, body {
   width: 30px !important;
   height: 30px !important;
 }
+
 .leaflet-control-zoom a:last-child {
   border-bottom: none !important;
 }
+
 .leaflet-control-zoom a:hover {
   background: var(--color-bg) !important;
 }
 
-/* ─── Map Markers ────────────────────────────────────────────────── */
+/* ─── Map Markers ────────────────────────────────────────────────────────── */
 .map-marker {
   background: var(--color-surface);
   border: 2px solid var(--color-primary);
@@ -217,19 +226,35 @@ html, body {
   line-height: 1;
 }
 
-/* ─── Scrollbar ──────────────────────────────────────────────────── */
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 4px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: var(--radius-pill);
 }
 
-/* ─── Utility ────────────────────────────────────────────────────── */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* ─── Utility ────────────────────────────────────────────────────────────── */
 .sr-only {
   position: absolute;
   width: 1px;

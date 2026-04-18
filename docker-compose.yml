@@ -1,23 +1,31 @@
 version: '3.9'
 
+# All secrets and configuration MUST be provided via a .env file.
+# Copy .env.example to .env and fill in all required values before starting.
+# Never commit .env to version control.
+
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD:-changeme}
+      # ELASTICSEARCH_PASSWORD is required — no default fallback intentionally.
+      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    ports:
-      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    # Elasticsearch port is NOT exposed to the host by default.
+    # Uncomment only for local debugging — never expose in production.
+    # ports:
+    #   - "${ELASTICSEARCH_PORT:-9200}:9200"
     volumes:
       - es-data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf -u elastic:${ELASTICSEARCH_PASSWORD:-changeme} http://localhost:9200/_cluster/health | grep -v '\"status\":\"red\"'"]
+      test: ["CMD-SHELL", "curl -sf -u elastic:${ELASTICSEARCH_PASSWORD} http://localhost:9200/_cluster/health | grep -v '\"status\":\"red\"'"]
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 30s
+    restart: unless-stopped
 
   backend:
     build:
@@ -30,6 +38,10 @@ services:
       elasticsearch:
         condition: service_healthy
     restart: unless-stopped
+    # Read-only filesystem — backend only needs to write /tmp
+    read_only: true
+    tmpfs:
+      - /tmp
 
   frontend:
     build:
@@ -38,9 +50,8 @@ services:
     ports:
       - "${FRONTEND_PORT:-4200}:80"
     environment:
-      # BACKEND_URL must always be set — if missing, envsubst generates an
-      # invalid nginx config (proxy_pass ;) and the container refuses to start.
-      - BACKEND_URL=${BACKEND_URL:-http://backend:8000}
+      # BACKEND_URL is required — must point to the backend service.
+      - BACKEND_URL=${BACKEND_URL}
     depends_on:
       - backend
     restart: unless-stopped
