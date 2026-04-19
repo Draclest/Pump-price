@@ -8,3 +8,9 @@ dist/
 .angular/
 *.egg-info/
 .venv/
+
+# graphify - ignore generated/verbose outputs, keep report + graph data
+graphify-out/obsidian/
+graphify-out/graph.html
+graphify-out/.graphify_*
+graphify-out/cost.json
