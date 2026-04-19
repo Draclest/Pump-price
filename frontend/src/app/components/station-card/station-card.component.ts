@@ -4,6 +4,7 @@ import {
   EventEmitter,
   Input,
   Output,
+  signal,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Station, FUEL_LABELS, ScoreBreakdown } from '../../models/station.model';
@@ -28,11 +29,11 @@ interface ScoreRow {
          [attr.aria-pressed]="selected"
          [attr.aria-label]="cardAriaLabel"
          tabindex="0"
-         (click)="select.emit(station)"
+         (click)="onCardClick()"
          (mouseenter)="hovered.emit(station.id)"
          (mouseleave)="hovered.emit(null)"
-         (keydown.enter)="select.emit(station)"
-         (keydown.space)="select.emit(station)">
+         (keydown.enter)="onCardClick()"
+         (keydown.space)="onCardClick()">
 
       <!-- Top row: logo + info + price hero -->
       <div class="card-top">
@@ -101,11 +102,12 @@ interface ScoreRow {
                    [class.score-badge--amber]="station.score >= 50 && station.score < 70"
                    [class.score-badge--red]="station.score < 50"
                    [attr.aria-label]="'Score: ' + station.score + '/100'"
-                   title="Score global">
+                   title="Score global"
+                   (click)="onScoreTap($event)">
                 {{ station.score | number:'1.0-0' }}
               </div>
               @if (scoreBreakdownRows.length > 0) {
-                <div class="score-tooltip">
+                <div class="score-tooltip" [class.score-tooltip--visible]="showTooltip()">
                   <div class="tooltip-title">Composition du score</div>
                   @for (c of scoreBreakdownRows; track c.key) {
                     <div class="tooltip-row" [class.tooltip-row--primary]="c.key === 'price' || c.key === 'detour' || c.key === 'distance'">
@@ -317,7 +319,8 @@ interface ScoreRow {
       z-index: 200;
       pointer-events: none;
     }
-    .score-wrap:hover .score-tooltip { display: block; }
+    .score-wrap:hover .score-tooltip,
+    .score-tooltip--visible { display: block; }
 
     .tooltip-title { font-size: 10px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
 
@@ -396,6 +399,19 @@ interface ScoreRow {
     .btn-card--gmaps:active { background: var(--color-accent-blue-border); }
 
     .btn-card--full { flex: 2; }
+
+    /* ── Mobile overrides ── */
+    @media (max-width: 768px) {
+      .card { margin: 0 10px 10px; padding: 14px 14px 12px; }
+      .card-logo { width: 44px; height: 44px; }
+      .card-name { font-size: var(--font-size-md); }
+      .card-best-price { font-size: 20px; }
+      .btn-card { padding: 12px 0; font-size: var(--font-size-sm); min-height: 48px; }
+      .fuel-badge { padding: 6px 10px; min-width: 56px; }
+      .badge-price { font-size: var(--font-size-md); }
+      .score-tooltip { display: none; }
+      .score-tooltip--visible { display: block; }
+    }
   `],
 })
 export class StationCardComponent {
@@ -413,7 +429,18 @@ export class StationCardComponent {
   @Output() readonly hovered         = new EventEmitter<string | null>();
   @Output() readonly exportToMaps    = new EventEmitter<void>();
 
-  readonly fuelLabels = FUEL_LABELS;
+  readonly fuelLabels  = FUEL_LABELS;
+  readonly showTooltip = signal(false);
+
+  onCardClick(): void {
+    this.showTooltip.set(false);
+    this.select.emit(this.station);
+  }
+
+  onScoreTap(e: Event): void {
+    e.stopPropagation();
+    this.showTooltip.update(v => !v);
+  }
 
   brandInitial(): string {
     return (this.station.brand || this.station.name || '?').charAt(0).toUpperCase();
