@@ -35,11 +35,26 @@ export class IngestionStatusService implements OnDestroy {
   readonly state = this._state.asReadonly();
 
   private _timer: ReturnType<typeof setInterval> | null = null;
+  private _timeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Maximum time to show the loading banner before giving up
+  private static readonly MAX_LOADING_MS = 3 * 60 * 1_000; // 3 minutes
 
   startPolling(): void {
     this._poll();
-    // Poll every 5 s while running, every 30 s otherwise
     this._timer = setInterval(() => this._poll(), 5_000);
+    // Safety valve: stop showing the banner after MAX_LOADING_MS regardless
+    this._timeout = setTimeout(() => {
+      if (this.isLoading()) {
+        this._state.set({ ...this._state(), status: 'unknown' });
+      }
+      this._stop();
+    }, IngestionStatusService.MAX_LOADING_MS);
+  }
+
+  private _stop(): void {
+    if (this._timer) { clearInterval(this._timer); this._timer = null; }
+    if (this._timeout) { clearTimeout(this._timeout); this._timeout = null; }
   }
 
   private _poll(): void {
@@ -47,19 +62,16 @@ export class IngestionStatusService implements OnDestroy {
       next: (s) => {
         this._state.set(s);
         // Stop polling once done or in error — no point continuing
-        if ((s.status === 'done' || s.status === 'error') && this._timer) {
-          clearInterval(this._timer);
-          this._timer = null;
+        if (s.status === 'done' || s.status === 'error') {
+          this._stop();
         }
       },
       error: () => {
-        // API unreachable — don't crash the app, just mark unknown
         this._state.set({ ...this._state(), status: 'unknown' });
+        this._stop();
       },
     });
   }
 
-  ngOnDestroy(): void {
-    if (this._timer) clearInterval(this._timer);
-  }
+  ngOnDestroy(): void { this._stop(); }
 }
