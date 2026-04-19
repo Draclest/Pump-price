@@ -1,0 +1,201 @@
+{
+  "main": {
+    "id": "f25ab1d620ace7e5",
+    "type": "split",
+    "children": [
+      {
+        "id": "b0bed318539a7624",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "3092e760a24f8caf",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "obsidian/Return a minimal valid station dict..md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Return a minimal valid station dict."
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "2e458deef871f2e1",
+    "type": "split",
+    "children": [
+      {
+        "id": "ff250672e0e6ffab",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "96dafc9b585e28ce",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorateur de fichiers"
+            }
+          },
+          {
+            "id": "dd776e53a2108ff8",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Rechercher"
+            }
+          },
+          {
+            "id": "a1e283cb06ae2871",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Signets"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "acc339043600f0bd",
+    "type": "split",
+    "children": [
+      {
+        "id": "1e47f96fd50c2a40",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f3b9b9c86cecf5ae",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "GRAPH_REPORT.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Rétrolien pour GRAPH_REPORT"
+            }
+          },
+          {
+            "id": "6c1462adfeb20ae3",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "GRAPH_REPORT.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Liens sortants de GRAPH_REPORT"
+            }
+          },
+          {
+            "id": "d161e414eed1ef41",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Mots-clés"
+            }
+          },
+          {
+            "id": "4b0bd600de211675",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Toutes les propriétés"
+            }
+          },
+          {
+            "id": "80ab25e7ecfbb9d3",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "GRAPH_REPORT.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Plan de GRAPH_REPORT"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Ouvrir le sélecteur rapide": false,
+      "graph:Ouvrir la vue graphique": false,
+      "canvas:Créer une nouvelle toile": false,
+      "daily-notes:Ouvrir la note quotidienne": false,
+      "templates:Insérer le modèle": false,
+      "command-palette:Ouvrir la palette de commandes": false,
+      "bases:Créer une nouvelle base": false
+    }
+  },
+  "active": "3092e760a24f8caf",
+  "lastOpenFiles": [
+    "needs_update",
+    "cache/2b06855b1a21318af011494315d11c6db492f4f5921d11edf7d6dc19f379262d.json",
+    "cache/4f19ccdfd7753a30fb6fb7b4fceffe50962c40b181c1deacbb58b56142f3b42a.json",
+    "cache/b14b89ca9bd32b5315cb8ece96ad9ecf3533ec66809fad3040c051cd0b53a2a0.json",
+    "obsidian/Return closest OSM station within MATCH_RADIUS_M, or None..md",
+    "obsidian/Return CORS origins as a list..md",
+    "obsidian/Angular App Entry index.html.md",
+    "obsidian/_fraicheur_score().md",
+    "obsidian/_haversine_km().md",
+    "GRAPH_REPORT.md",
+    "cache/688cd5e19bca004bd014528885333e49581f2ecf54a15160ed2c5310f4c07bb6.json",
+    "Sans titre.canvas"
+  ]
+}

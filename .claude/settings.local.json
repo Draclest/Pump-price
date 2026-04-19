@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(python3 \"/home/draclest/Documents/Claude Porject/prix à la pompe/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"fuel price finder mobile map consumer utility\" --design-system -p \"Prix à la Pompe\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(pipx install *)",
+      "Bash(pip3 install *)",
+      "Bash(graphify --version)",
+      "Bash(pip3 show *)",
+      "Bash(/home/draclest/.local/share/pipx/venvs/graphifyy/bin/pip install *)",
+      "Bash(/home/draclest/.local/share/pipx/venvs/graphifyy/bin/python -m pip install watchdog)",
+      "Bash(npx ng *)"
     ]
   }
 }
