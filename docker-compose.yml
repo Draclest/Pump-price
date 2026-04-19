@@ -55,6 +55,17 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - default
+      - npm_network
 
 volumes:
   es-data:
+
+networks:
+  default: {}
+  # Réseau externe partagé avec Nginx Proxy Manager.
+  # Créer avec : docker network create npm_network
+  # Dans NPM : Forward Hostname = frontend, Port = 80
+  npm_network:
+    external: true
