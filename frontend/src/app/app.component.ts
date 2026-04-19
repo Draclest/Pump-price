@@ -22,6 +22,8 @@ import { IngestionStatusService } from './services/ingestion-status.service';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <div class="app-wrapper">
+
     <!-- ── Ingestion banner — shown while initial data load is in progress ── -->
     @if (ingestionStatus.isLoading()) {
       <div class="ingestion-banner" role="status" aria-live="polite">
@@ -450,9 +452,11 @@ import { IngestionStatusService } from './services/ingestion-status.service';
       }
 
     </div>
+    </div><!-- /app-wrapper -->
   `,
   styles: [`
-    .app-shell { display: flex; height: 100dvh; background: var(--color-bg); overflow: hidden; }
+    .app-wrapper { display: flex; flex-direction: column; height: 100dvh; }
+    .app-shell { display: flex; flex: 1; min-height: 0; background: var(--color-bg); overflow: hidden; }
 
     /* ── Sidebar ── */
     .sidebar {
@@ -705,15 +709,12 @@ import { IngestionStatusService } from './services/ingestion-status.service';
 
     /* ── Ingestion banner ── */
     .ingestion-banner {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
       background: var(--color-primary); color: #fff;
       display: flex; align-items: center; justify-content: center; gap: 8px;
       padding: 8px 16px; font-size: var(--font-size-sm); font-weight: 500;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      flex-shrink: 0;
     }
-    .ingestion-banner--error {
-      background: var(--color-error);
-    }
+    .ingestion-banner--error { background: var(--color-error); }
 
     /* ── Mobile (≤768px) ── */
     @media (max-width: 768px) {
@@ -731,7 +732,7 @@ import { IngestionStatusService } from './services/ingestion-status.service';
       }
       .sidebar--open { transform: translateY(0); }
       .sidebar-close-btn { display: flex; }
-      .map-area { position: absolute; inset: 0; }
+      .map-area { position: absolute; inset: 0; top: 0; }
       .fab-list { display: flex; }
     }
   `],
