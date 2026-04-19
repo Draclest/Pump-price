@@ -25,7 +25,7 @@ import { IngestionStatusService } from './services/ingestion-status.service';
     <div class="app-wrapper">
 
     <!-- ── Ingestion banner — shown while initial data load is in progress ── -->
-    @if (ingestionStatus.isLoading()) {
+    @if (ingestionStatus.isLoading() && state.displayedStations().length === 0 && state.routeStations().length === 0) {
       <div class="ingestion-banner" role="status" aria-live="polite">
         <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
