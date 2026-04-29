@@ -13,6 +13,11 @@ _BASE = (
     "prix-carburants-quotidien"
 )
 
+_LIVE_BASE = (
+    "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/"
+    "prix-carburants-flux-instantane-v2"
+)
+
 
 class Settings(BaseSettings):
     # ── Elasticsearch ────────────────────────────────────────────────────────
@@ -46,12 +51,17 @@ class Settings(BaseSettings):
     otel_service_name:           str = "prix-pompe-api"
 
     # ── Government dataset ────────────────────────────────────────────────────
+    # Daily snapshot (full, ~74k records, updated once a day at ~11h)
     data_gouv_url:         str = f"{_BASE}/exports/json"
     data_gouv_records_url: str = f"{_BASE}/records"
+    # Live feed (flux instantané v2 — updated every few minutes by stations)
+    data_gouv_live_url:    str = f"{_LIVE_BASE}/exports/json"
 
     # ── Scheduling ───────────────────────────────────────────────────────────
     # Full ingestion — dataset updated daily at 11h
-    ingestion_schedule: str = "0 11 * * *"
+    ingestion_schedule:   str = "0 11 * * *"
+    # Live feed — poll every 10 minutes for near-real-time price updates
+    live_feed_schedule:   str = "*/10 * * * *"
 
     # ── Routing ──────────────────────────────────────────────────────────────
     osrm_url: str = "https://router.project-osrm.org"

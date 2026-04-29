@@ -50,3 +50,6 @@ class IngestionState:
 
 # Singleton — imported by main.py, ingestion worker, and the status endpoint
 ingestion_state = IngestionState()
+
+# Separate singleton for the 10-minute live feed job
+live_feed_state = IngestionState()

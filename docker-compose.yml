@@ -65,5 +65,5 @@ volumes:
 networks:
   default: {}
   proxy-net:
-    external: true
-    name: ngnixproxymanager_default
+   # external: true
+    #name: ngnixproxymanager_default

@@ -318,17 +318,28 @@ import { RouteRequest } from './components/route-panel/route-panel.component';
           (historyRequested)="state.historyStation.set($event)">
         </app-map>
 
-        <!-- Mobile: floating top bar -->
-        <div class="mobile-topbar">
+        <!-- Mobile: floating top bar (hidden when route planner is fullscreen) -->
+        <div class="mobile-topbar" [class.mobile-topbar--hidden]="state.mode() === 'route' && sheetSnap() === 2 && !state.routeData()">
           <button class="search-pill" type="button" aria-label="Rechercher" (click)="openSearch()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <span class="search-pill-label">
-              {{ state.locationLabel() || (state.mode() === 'route' ? 'Planifier un itinéraire…' : 'Chercher une adresse…') }}
-            </span>
+            @if (state.mode() === 'nearby') {
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <span class="search-pill-label">{{ state.locationLabel() || 'Chercher une adresse…' }}</span>
+            } @else {
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M3 3h7l7 9-7 9H3l7-9z"/>
+              </svg>
+              <span class="search-pill-label">
+                @if (state.routeOrigin() && state.routeDest()) {
+                  {{ state.routeOrigin()!.label }} → {{ state.routeDest()!.label }}
+                } @else {
+                  Planifier un itinéraire…
+                }
+              </span>
+            }
           </button>
-          @if (!state.insecureContext) {
+          @if (!state.insecureContext && state.mode() === 'nearby') {
             <button class="fab-locate-m" type="button" [disabled]="state.locating()"
                     aria-label="Me localiser" (click)="state.locateUser()">
               @if (!state.locating()) {
@@ -357,6 +368,8 @@ import { RouteRequest } from './components/route-panel/route-panel.component';
         </button>
       </div>
 
+    </div><!-- /app-shell -->
+
       <!-- ══ MOBILE BOTTOM SHEET ═══════════════════════════════════════════ -->
       <div class="sheet"
            [class.sheet--snap0]="sheetSnap() === 0"
@@ -367,57 +380,106 @@ import { RouteRequest } from './components/route-panel/route-panel.component';
         <!-- Drag handle -->
         <div class="sheet-handle-bar"
              (touchstart)="onHandleTouchStart($event)"
-             (touchend)="onHandleTouchEnd($event)">
+             (touchmove)="onHandleTouchMove($event)"
+             (touchend)="onHandleTouchEnd($event)"
+             (click)="onHandleClick()">
           <div class="sheet-drag-pill" aria-hidden="true"></div>
-          <div class="sheet-header-row">
-            <div class="sheet-title-group">
+
+          @if (state.mode() === 'route' && sheetSnap() === 2 && !state.routeData()) {
+            <!-- Route planning header: title + locate + close -->
+            <div class="sheet-header-row">
               <span class="sheet-title">
-                @if (state.mode() === 'nearby') {
-                  @if (state.loading()) {
-                    <svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                    Recherche…
-                  } @else if (state.displayedStations().length > 0) {
-                    {{ state.displayedStations().length }} stations
-                  } @else if (state.hasSearched()) {
-                    Aucune station
-                  } @else {
-                    Stations à proximité
-                  }
-                } @else {
-                  @if (state.routeLoading()) {
-                    <svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                    Calcul…
-                  } @else if (state.routeStations().length > 0) {
-                    {{ state.routeStations().length }} stations
-                  } @else {
-                    Planifier un trajet
-                  }
-                }
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 3h7l7 9-7 9H3l7-9z"/></svg>
+                Planifier un itinéraire
               </span>
-              @if (state.filters().fuelType !== 'Tous') {
-                <span class="fuel-chip">{{ fuelLabels[state.filters().fuelType] || state.filters().fuelType }}</span>
-              }
+              <div class="sheet-header-actions">
+                @if (!state.insecureContext) {
+                  <button class="sheet-icon-btn" type="button" [disabled]="state.locating()"
+                          aria-label="Me localiser" (click)="state.locateUser(); $event.stopPropagation()">
+                    @if (!state.locating()) {
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+                        <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
+                      </svg>
+                    } @else {
+                      <svg class="spin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    }
+                  </button>
+                }
+                <button class="sheet-icon-btn" type="button" aria-label="Réduire"
+                        (click)="sheetSnap.set(0); $event.stopPropagation()">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                    <polyline points="18 15 12 9 6 15"/>
+                  </svg>
+                </button>
+              </div>
             </div>
-            <button class="filters-pill-btn" type="button" (click)="filtersOpen.set(true); $event.stopPropagation()" aria-label="Filtres">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
-              </svg>
-              Filtres
-            </button>
-          </div>
+          } @else {
+            <!-- Standard header: title/count + filters -->
+            <div class="sheet-header-row">
+              <div class="sheet-title-group">
+                <span class="sheet-title">
+                  @if (state.mode() === 'nearby') {
+                    @if (state.loading()) {
+                      <svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                      Recherche…
+                    } @else if (state.displayedStations().length > 0) {
+                      {{ state.displayedStations().length }} stations
+                    } @else if (state.hasSearched()) {
+                      Aucune station
+                    } @else {
+                      Stations à proximité
+                    }
+                  } @else {
+                    @if (state.routeLoading()) {
+                      <svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                      Calcul…
+                    } @else if (state.routeStations().length > 0) {
+                      {{ state.routeStations().length }} stations sur le trajet
+                    } @else {
+                      Itinéraire
+                    }
+                  }
+                </span>
+                @if (state.filters().fuelType !== 'Tous') {
+                  <span class="fuel-chip">{{ fuelLabels[state.filters().fuelType] || state.filters().fuelType }}</span>
+                }
+              </div>
+              <div class="sheet-header-actions">
+                @if (state.mode() === 'route' && state.routeData()) {
+                  <button class="sheet-icon-btn" type="button" aria-label="Modifier l'itinéraire"
+                          (click)="sheetSnap.set(2); $event.stopPropagation()" title="Modifier">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                }
+                <button class="filters-pill-btn" type="button" (click)="filtersOpen.set(true); $event.stopPropagation()" aria-label="Filtres">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+                  </svg>
+                  Filtres
+                </button>
+              </div>
+            </div>
+          }
         </div>
 
         <!-- Sheet scrollable body -->
         <div class="sheet-body">
 
-          <!-- Search input (visible only at full snap) -->
-          @if (sheetSnap() === 2) {
+          <!-- Route planning form: shown in snap2 route mode only -->
+          @if (state.mode() === 'route' && sheetSnap() === 2) {
+            <div class="sheet-route-block">
+              <app-route-panel [prefillOrigin]="state.locatedPosition()" (routeRequested)="onMobileRoute($event)" (routeCleared)="state.onRouteCleared()"></app-route-panel>
+            </div>
+          }
+
+          <!-- Address search: nearby snap2 only -->
+          @if (state.mode() === 'nearby' && sheetSnap() === 2) {
             <div class="sheet-search-block">
-              @if (state.mode() === 'nearby') {
-                <app-address-search [prefill]="state.locatedPosition()" (locationSelected)="onMobileSearch($event)"></app-address-search>
-              } @else {
-                <app-route-panel [prefillOrigin]="state.locatedPosition()" (routeRequested)="onMobileRoute($event)" (routeCleared)="state.onRouteCleared()"></app-route-panel>
-              }
+              <app-address-search [prefill]="state.locatedPosition()" (locationSelected)="onMobileSearch($event)"></app-address-search>
             </div>
           }
 
@@ -614,8 +676,7 @@ import { RouteRequest } from './components/route-panel/route-panel.component';
         <app-price-history [station]="state.historyStation()!" (close)="state.historyStation.set(null)"></app-price-history>
       }
 
-    </div>
-    </div>
+    </div><!-- /app-wrapper -->
   `,
   styles: [`
     .app-wrapper { display: flex; flex-direction: column; height: 100dvh; }
@@ -629,6 +690,7 @@ import { RouteRequest } from './components/route-panel/route-panel.component';
       box-shadow: var(--shadow-md);
       z-index: 20; overflow-y: auto; overflow-x: hidden;
     }
+
 
     .mode-tabs { display: flex; border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
 
@@ -818,8 +880,8 @@ import { RouteRequest } from './components/route-panel/route-panel.component';
     .mobile-topbar { display: none; }
     .filters-overlay { display: none; }
 
-    /* ══ MOBILE (≤768px) ══════════════════════════════════════════════════ */
-    @media (max-width: 768px) {
+    /* ══ MOBILE + TABLETTE (≤1024px) ════════════════════════════════════════ */
+    @media (max-width: 1024px) {
       .app-shell { position: relative; }
 
       /* Hide desktop sidebar */
@@ -832,11 +894,14 @@ import { RouteRequest } from './components/route-panel/route-panel.component';
       .fab-list { display: none !important; }
 
       /* ── Floating top bar ── */
+      .mobile-topbar--hidden { opacity: 0; pointer-events: none; }
+
       .mobile-topbar {
         display: flex;
         position: absolute;
         top: 12px; left: 12px; right: 12px;
-        z-index: 40;
+        z-index: 1000;
+        transition: opacity 0.2s ease;
         gap: 8px;
         align-items: center;
       }
@@ -940,9 +1005,29 @@ import { RouteRequest } from './components/route-panel/route-panel.component';
         overscroll-behavior: contain;
       }
 
+      .sheet-header-actions {
+        display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+      }
+
+      .sheet-icon-btn {
+        width: 34px; height: 34px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--color-surface-3); border: 1.5px solid var(--color-border);
+        border-radius: 50%; color: var(--color-text-secondary); cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background var(--transition-fast);
+      }
+      .sheet-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+      .sheet-icon-btn:not(:disabled):active { background: var(--color-border); }
+
       .sheet-search-block {
         padding: 12px 12px 8px;
         border-bottom: 1px solid var(--color-border-subtle);
+      }
+
+      .sheet-route-block {
+        flex: 1; overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .sheet-error {
@@ -1059,8 +1144,15 @@ export class AppComponent implements OnInit {
 
   private _touchStartY: number    = 0;
   private _touchStartSnap: 0|1|2  = 0;
+  private _touchMoved               = false;
 
   constructor() {
+    // Auto-expand sheet when switching to route mode so inputs are visible
+    effect(() => {
+      if (this.state.mode() === 'route' && !untracked(() => this.state.routeData())) {
+        this.sheetSnap.set(2);
+      }
+    });
     // Snap to half when data loads
     effect(() => {
       if (this.state.sidebarOpen()) {
@@ -1094,19 +1186,33 @@ export class AppComponent implements OnInit {
     this.sheetSnap.set(2);
   }
 
+  editRoute(): void {
+    this.sheetSnap.set(2);
+  }
+
   onHandleTouchStart(e: TouchEvent): void {
     this._touchStartY    = e.touches[0].clientY;
     this._touchStartSnap = this.sheetSnap();
+    this._touchMoved     = false;
+  }
+
+  onHandleTouchMove(e: TouchEvent): void {
+    if (Math.abs(e.touches[0].clientY - this._touchStartY) > 8) {
+      this._touchMoved = true;
+    }
   }
 
   onHandleTouchEnd(e: TouchEvent): void {
     const delta = e.changedTouches[0].clientY - this._touchStartY;
-    if (Math.abs(delta) < 10) {
-      this.sheetSnap.set(this.sheetSnap() === 0 ? 1 : (this.sheetSnap() === 1 ? 2 : 0));
-      return;
-    }
-    if (delta > 50)       this.sheetSnap.set(Math.max(0, this._touchStartSnap - 1) as 0|1|2);
-    else if (delta < -50) this.sheetSnap.set(Math.min(2, this._touchStartSnap + 1) as 0|1|2);
+    if (!this._touchMoved || Math.abs(delta) < 8) return; // let click handler manage taps
+    if (delta > 40)       this.sheetSnap.set(Math.max(0, this._touchStartSnap - 1) as 0|1|2);
+    else if (delta < -40) this.sheetSnap.set(Math.min(2, this._touchStartSnap + 1) as 0|1|2);
+  }
+
+  onHandleClick(): void {
+    if (this._touchMoved) return; // was a drag, not a tap
+    const cur = this.sheetSnap();
+    this.sheetSnap.set((cur === 0 ? 1 : cur === 1 ? 2 : 0) as 0|1|2);
   }
 
   onMobileSearch(event: { lat: number; lon: number; label: string }): void {
@@ -1116,7 +1222,7 @@ export class AppComponent implements OnInit {
 
   onMobileRoute(req: RouteRequest): void {
     this.state.onRouteRequested(req);
-    this.sheetSnap.set(1);
+    this.sheetSnap.set(1); // show results at half height, map visible above
   }
 
   onMobileFilters(f: FilterValues): void {

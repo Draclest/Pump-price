@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 _RECORDS_URL = settings.data_gouv_records_url
 
-_BATCH_SIZE = 100
+_BATCH_SIZE = 10          # IDs per fetch_by_ids request (10 stations × ~6 fuels = ~60 records, well under the 100-record API cap)
+_MAX_RECORDS_PER_REQUEST = 100  # hard limit enforced by the API
 
 # gov day id → OSM day abbreviation
 _DAY_MAP = {
@@ -206,6 +207,31 @@ def parse_records_to_stations(records: list[dict]) -> list[dict]:
     return list(grouped.values())
 
 
+async def fetch_live() -> list[dict]:
+    """
+    Fetch the live feed (prix-carburants-flux-instantane-v2).
+    Updated every few minutes as stations push new prices.
+    Returns the same station-grouped structure as fetch_all().
+    """
+    logger.info("GOV fetch_live from %s", settings.data_gouv_live_url)
+    try:
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            resp = await client.get(settings.data_gouv_live_url)
+            resp.raise_for_status()
+            raw = resp.json()
+    except Exception as exc:
+        logger.error("GOV fetch_live failed: %s", exc)
+        raise
+
+    if not isinstance(raw, list):
+        raw = raw.get("results", [])
+
+    logger.info("GOV fetch_live: %d raw records received", len(raw))
+    stations = parse_records_to_stations(raw)
+    logger.info("GOV fetch_live: %d stations after grouping", len(stations))
+    return stations
+
+
 async def fetch_all() -> list[dict]:
     """Fetch the full gov dataset (export endpoint, returns a flat JSON list of ~74k records)."""
     logger.info("GOV fetch_all from %s", settings.data_gouv_url)
@@ -243,7 +269,7 @@ async def fetch_by_ids(gov_ids: list[str]) -> list[dict]:
         id_list = ", ".join(f'"{gid}"' for gid in batch)
         params = {
             "where": f"id in ({id_list})",
-            "limit": _BATCH_SIZE * 10,  # up to 10 fuels per station
+            "limit": _MAX_RECORDS_PER_REQUEST,
         }
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:

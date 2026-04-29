@@ -14,7 +14,7 @@ from app.config import settings
 from app.workers.ingestion import run_ingestion
 from app.api.deps import get_es
 from app.services.elasticsearch_client import INDEX_NAME
-from app.services.ingestion_state import ingestion_state
+from app.services.ingestion_state import ingestion_state, live_feed_state
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
 
@@ -40,8 +40,11 @@ async def get_ingestion_status():
     """
     Public endpoint — no authentication required.
     Returns the current ingestion state so the frontend can show a loading indicator.
+    Includes both the daily full ingestion and the 10-minute live feed state.
     """
-    return ingestion_state.to_dict()
+    data = ingestion_state.to_dict()
+    data["live_feed"] = live_feed_state.to_dict()
+    return data
 
 
 @router.post("/trigger", dependencies=[Depends(_require_api_key)])

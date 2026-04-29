@@ -28,6 +28,7 @@ from app.config import settings
 from app.api import stations, ingestion
 from app.api.deps import get_es, close_es
 from app.workers.ingestion import run_ingestion
+from app.workers.live_feed import run_live_feed
 from app.services.elasticsearch_client import INDEX_NAME
 
 # ── Logging ──────────────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ async def lifespan(_app: FastAPI):
 
     asyncio.create_task(_bootstrap_if_empty(es))
 
+    # ── Daily full ingestion ──────────────────────────────────────────────────
     cron_parts = settings.ingestion_schedule.split()
     if len(cron_parts) == 5:
         minute, hour, day, month, day_of_week = cron_parts
@@ -106,8 +108,22 @@ async def lifespan(_app: FastAPI):
             id="data_ingestion",
             replace_existing=True,
         )
+    logger.info("Daily ingestion scheduled — cron: %s", settings.ingestion_schedule)
+
+    # ── Live feed (every 10 minutes) ──────────────────────────────────────────
+    live_parts = settings.live_feed_schedule.split()
+    if len(live_parts) == 5:
+        lm, lh, ld, lmo, ldow = live_parts
+        scheduler.add_job(
+            run_live_feed,
+            CronTrigger(minute=lm, hour=lh, day=ld, month=lmo, day_of_week=ldow),
+            args=[es],
+            id="live_feed",
+            replace_existing=True,
+        )
+    logger.info("Live feed scheduled — cron: %s", settings.live_feed_schedule)
+
     scheduler.start()
-    logger.info("Scheduler started — schedule: %s", settings.ingestion_schedule)
 
     yield
 

@@ -152,7 +152,7 @@ import { openRoute } from '../../utils/navigation.util';
     }
   `,
   styles: [`
-    :host { display: block; width: 100%; height: 100%; position: relative; }
+    :host { display: block; width: 100%; height: 100%; position: relative; z-index: 0; isolation: isolate; }
 
     .map-container { width: 100%; height: 100%; }
 
