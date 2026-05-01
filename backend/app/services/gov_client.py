@@ -207,11 +207,67 @@ def parse_records_to_stations(records: list[dict]) -> list[dict]:
     return list(grouped.values())
 
 
+_LIVE_FUEL_MAP = {
+    "gazole": "Gazole",
+    "sp95":   "SP95",
+    "sp98":   "SP98",
+    "e10":    "E10",
+    "e85":    "E85",
+    "gplc":   "GPLc",
+}
+
+
+def _parse_live_records(records: list[dict]) -> list[dict]:
+    """
+    Parse the live feed format (one record per station, prices as columns).
+    Fields: gazole_prix, gazole_maj, sp95_prix, sp95_maj, …
+    Returns the same station-grouped structure as parse_records_to_stations().
+    """
+    stations = []
+    for rec in records:
+        gov_id = str(rec.get("id", "")).strip()
+        if not gov_id:
+            continue
+
+        fuels = []
+        for key, label in _LIVE_FUEL_MAP.items():
+            price = rec.get(f"{key}_prix")
+            maj   = rec.get(f"{key}_maj")
+            if price is None:
+                continue
+            try:
+                price = float(price)
+            except (ValueError, TypeError):
+                continue
+            try:
+                updated_at = datetime.fromisoformat(maj.replace("Z", "+00:00"))
+            except Exception:
+                updated_at = datetime.now(timezone.utc)
+            fuels.append({"type": label, "price": price, "updated_at": updated_at.isoformat()})
+
+        if not fuels:
+            continue
+
+        geom = rec.get("geom", {}) or {}
+        stations.append({
+            "gov_id":           gov_id,
+            "fuels":            fuels,
+            "gov_last_updated": datetime.now(timezone.utc).isoformat(),
+            "is_open":          None,  # not reliably available in live feed
+            "location": {
+                "lat": geom.get("lat") or rec.get("latitude"),
+                "lon": geom.get("lon") or rec.get("longitude"),
+            },
+        })
+    return stations
+
+
 async def fetch_live() -> list[dict]:
     """
-    Fetch the live feed (prix-carburants-flux-instantane-v2).
+    Fetch the live feed (prix-des-carburants-en-france-flux-instantane-v2).
     Updated every few minutes as stations push new prices.
-    Returns the same station-grouped structure as fetch_all().
+    One record per station with price columns (gazole_prix, sp95_prix, …).
+    Returns station-grouped dicts compatible with the live_feed worker.
     """
     logger.info("GOV fetch_live from %s", settings.data_gouv_live_url)
     try:
@@ -227,8 +283,8 @@ async def fetch_live() -> list[dict]:
         raw = raw.get("results", [])
 
     logger.info("GOV fetch_live: %d raw records received", len(raw))
-    stations = parse_records_to_stations(raw)
-    logger.info("GOV fetch_live: %d stations after grouping", len(stations))
+    stations = _parse_live_records(raw)
+    logger.info("GOV fetch_live: %d stations parsed", len(stations))
     return stations
 
 

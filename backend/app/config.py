@@ -15,7 +15,7 @@ _BASE = (
 
 _LIVE_BASE = (
     "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/"
-    "prix-carburants-flux-instantane-v2"
+    "prix-des-carburants-en-france-flux-instantane-v2"
 )
 
 
