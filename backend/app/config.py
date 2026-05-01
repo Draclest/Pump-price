@@ -46,8 +46,15 @@ class Settings(BaseSettings):
     ingestion_api_key: str = Field(default="", description="API key for ingestion endpoints")
 
     # ── Observability ─────────────────────────────────────────────────────────
-    otel_exporter_type:          Literal["console", "otlp", "jaeger"] = "console"
-    otel_exporter_otlp_endpoint: str = "http://localhost:4317"
+    # Set OTEL_ENABLED=true to activate traces, metrics and logs.
+    # When false, zero overhead — SDK is never loaded.
+    otel_enabled:                bool = False
+    otel_exporter_type:          Literal["console", "otlp"] = "otlp"
+    # OTLP collector base URL (without /v1/traces suffix — appended automatically).
+    # Example: http://otelcol:4318  or  https://ingest.example.com:443
+    otel_otlp_endpoint:          str = "http://localhost:4318"
+    # Comma-separated headers for auth: "Authorization=Bearer xxx,X-Tenant=myorg"
+    otel_otlp_headers:           str = ""
     otel_service_name:           str = "prix-pompe-api"
 
     # ── Government dataset ────────────────────────────────────────────────────

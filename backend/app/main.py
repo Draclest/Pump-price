@@ -30,6 +30,7 @@ from app.api.deps import get_es, close_es
 from app.workers.ingestion import run_ingestion
 from app.workers.live_feed import run_live_feed
 from app.services.elasticsearch_client import INDEX_NAME
+from app.observability.telemetry import setup_telemetry, instrument_fastapi
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -37,6 +38,17 @@ logging.basicConfig(
     format='{"time": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}',
 )
 logger = logging.getLogger(__name__)
+
+# ── OpenTelemetry ─────────────────────────────────────────────────────────────
+_otel_handler = setup_telemetry(
+    enabled=settings.otel_enabled,
+    service_name=settings.otel_service_name,
+    otlp_endpoint=settings.otel_otlp_endpoint,
+    otlp_headers_raw=settings.otel_otlp_headers,
+    exporter_type=settings.otel_exporter_type,
+)
+if _otel_handler:
+    logging.getLogger().addHandler(_otel_handler)
 
 # ── Rate limiter ─────────────────────────────────────────────────────────────
 limiter = Limiter(
@@ -133,6 +145,8 @@ async def lifespan(_app: FastAPI):
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
+# FastAPI is created before instrument_fastapi() so the instrumentor can wrap
+# the already-created app instance (required by FastAPIInstrumentor.instrument_app).
 app = FastAPI(
     title="Prix à la Pompe",
     description="API pour trouver les stations-service les moins chères autour de vous",
@@ -143,6 +157,10 @@ app = FastAPI(
     docs_url="/docs"  if settings.enable_docs else None,
     redoc_url="/redoc" if settings.enable_docs else None,
 )
+
+# ── OpenTelemetry FastAPI instrumentation ────────────────────────────────────
+if settings.otel_enabled:
+    instrument_fastapi(app)
 
 # ── Rate limiting ─────────────────────────────────────────────────────────────
 app.state.limiter = limiter
