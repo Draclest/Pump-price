@@ -20,7 +20,7 @@ server {
     add_header Permissions-Policy        "geolocation=(self), camera=(), microphone=()" always;
 
     # CSP on a single line — Nginx does NOT support backslash line continuation inside directive values.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org https://upload.wikimedia.org https://logo.clearbit.com; connect-src 'self' https://api-adresse.data.gouv.fr https://nominatim.openstreetmap.org https://overpass-api.de https://router.project-osrm.org; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.tile.openstreetmap.org https://upload.wikimedia.org https://logo.clearbit.com; connect-src 'self' https://api-adresse.data.gouv.fr https://nominatim.openstreetmap.org https://overpass-api.de https://router.project-osrm.org; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self';" always;
 
     # HSTS — active only when the request arrived over HTTPS (set by upstream reverse proxy)
     set $hsts "";

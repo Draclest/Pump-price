@@ -96,3 +96,5 @@ export interface FilterValues {
   maxPrice:  number | null;
   services:  string[];
 }
+
+export type SortBy = 'score' | 'price' | 'distance' | 'freshness';

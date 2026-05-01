@@ -344,8 +344,12 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
   ngAfterViewInit(): void {
     this._initMap();
     this._initialized = true;
-    if (this.userLocation)   this._centerOnUser();
-    if (this.stations.length) this._diffMarkers();
+    // Defer invalidateSize so the container has its final CSS dimensions
+    setTimeout(() => {
+      this._map?.invalidateSize();
+      if (this.userLocation)    this._centerOnUser();
+      if (this.stations.length) this._diffMarkers();
+    }, 0);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -358,6 +362,7 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this._resizeObserver?.disconnect();
     this._map?.remove();
   }
 
@@ -401,6 +406,8 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   // ── Private: map logic ────────────────────────────────────────────────
 
+  private _resizeObserver?: ResizeObserver;
+
   private _initMap(): void {
     this._map = L.map(this.mapContainer.nativeElement, {
       center: [46.603354, 1.888334],
@@ -414,6 +421,10 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     }).addTo(this._map);
 
     this._markers.addTo(this._map);
+
+    // Recalculate map size whenever the container is resized (sidebar open/close, sheet snap)
+    this._resizeObserver = new ResizeObserver(() => this._map?.invalidateSize());
+    this._resizeObserver.observe(this.mapContainer.nativeElement);
   }
 
   private _centerOnUser(): void {

@@ -13,7 +13,7 @@ import { GeocodingService } from './geocoding.service';
 import { GeolocationService } from './geolocation.service';
 import { RoutingService, RouteGeometry } from './routing.service';
 import { StationService } from './station.service';
-import { FilterValues, Station } from '../models/station.model';
+import { FilterValues, SortBy, Station } from '../models/station.model';
 import { RouteRequest } from '../components/route-panel/route-panel.component';
 
 export type AppMode = 'nearby' | 'route';
@@ -43,9 +43,11 @@ export class AppStateService {
   readonly error           = signal<string | null>(null);
   readonly hasSearched     = signal(false);
 
+  readonly sortBy = signal<SortBy>('score');
+
   private readonly _allStations = signal<Station[]>([]);
 
-  readonly displayedStations = computed(() => this._allStations());
+  readonly displayedStations = computed(() => this._sortStations(this._allStations(), this.sortBy(), false));
   readonly top3              = computed(() => this.displayedStations().slice(0, 3));
   readonly otherStations     = computed(() => this.displayedStations().slice(3));
   readonly top3Ids           = computed(() => this.top3().map(s => s.id));
@@ -60,7 +62,7 @@ export class AppStateService {
   readonly routeMaxDetour = signal(5);
   readonly hasRouteSearched = signal(false);
 
-  readonly routeStations      = computed(() => this.routeData()?.stations ?? []);
+  readonly routeStations      = computed(() => this._sortStations(this.routeData()?.stations ?? [], this.sortBy(), true));
   readonly routeTop3          = computed(() => this.routeStations().slice(0, 3));
   readonly routeOtherStations = computed(() => this.routeStations().slice(3));
 
@@ -280,6 +282,35 @@ export class AppStateService {
   }
 
   // ── Private ───────────────────────────────────────────────────────────
+
+  private _sortStations(stations: Station[], sort: SortBy, routeMode: boolean): Station[] {
+    if (stations.length === 0) return stations;
+    const sorted = [...stations];
+    switch (sort) {
+      case 'price':
+        sorted.sort((a, b) => (a.matched_fuel?.price ?? Infinity) - (b.matched_fuel?.price ?? Infinity));
+        break;
+      case 'distance':
+        if (routeMode) {
+          sorted.sort((a, b) => (a._route_info?.detour_km ?? Infinity) - (b._route_info?.detour_km ?? Infinity));
+        } else {
+          sorted.sort((a, b) => (a.distance_meters ?? Infinity) - (b.distance_meters ?? Infinity));
+        }
+        break;
+      case 'freshness':
+        sorted.sort((a, b) => {
+          const ta = a.matched_fuel?.updated_at ? new Date(a.matched_fuel.updated_at).getTime() : 0;
+          const tb = b.matched_fuel?.updated_at ? new Date(b.matched_fuel.updated_at).getTime() : 0;
+          return tb - ta;
+        });
+        break;
+      case 'score':
+      default:
+        sorted.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        break;
+    }
+    return sorted;
+  }
 
   private _fallbackCopy(text: string, onSuccess: () => void): void {
     const ta = document.createElement('textarea');
