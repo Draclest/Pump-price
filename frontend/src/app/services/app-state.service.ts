@@ -5,7 +5,9 @@
  * packed into AppComponent. The component becomes a thin coordinator that simply
  * binds to this service and dispatches user events.
  */
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { switchMap, of } from 'rxjs';
 
 import { GeocodingService } from './geocoding.service';
 import { GeolocationService } from './geolocation.service';
@@ -22,6 +24,7 @@ export class AppStateService {
   private readonly geoService       = inject(GeolocationService);
   private readonly routingService   = inject(RoutingService);
   private readonly geocodingService = inject(GeocodingService);
+  private readonly destroyRef       = inject(DestroyRef);
 
   // ── Mode ──────────────────────────────────────────────────────────────
   readonly mode = signal<AppMode>('nearby');
@@ -92,29 +95,23 @@ export class AppStateService {
     this.locating.set(true);
     this.error.set(null);
 
-    this.geoService.getCurrentPosition().subscribe({
-      next: pos => {
+    this.geoService.getCurrentPosition().pipe(
+      switchMap(pos => {
         this.locating.set(false);
         this.userLocation.set(pos);
-
-        // Reverse-geocode to fill the active mode's address field
-        this.geocodingService.reverseGeocode(pos.lat, pos.lon).subscribe({
-          next: result => {
-            const label = result?.label ?? `${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)}`;
-            this.locationLabel.set(label);
-            this.locatedPosition.set({ lat: pos.lat, lon: pos.lon, label });
-          },
-          error: () => {
-            const label = 'Ma position';
-            this.locationLabel.set(label);
-            this.locatedPosition.set({ lat: pos.lat, lon: pos.lon, label });
-          },
-        });
-
         if (this.mode() === 'nearby') this.fetchStations(pos.lat, pos.lon);
+        return this.geocodingService.reverseGeocode(pos.lat, pos.lon).pipe(
+          switchMap(result => of({ pos, label: result?.label ?? `${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)}` })),
+        );
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: ({ pos, label }) => {
+        this.locationLabel.set(label);
+        this.locatedPosition.set({ lat: pos.lat, lon: pos.lon, label });
       },
       error: err => {
-        this.error.set(err.message);
+        this.error.set(err.message ?? 'Géolocalisation impossible');
         this.locating.set(false);
       },
     });

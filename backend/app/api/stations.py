@@ -14,19 +14,18 @@ from app.workers.refresh import schedule_refresh
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/stations", tags=["stations"])
 
+# All fuel types available — used by recommend and route-recommend when no specific type is requested
+_ALL_FUEL_TYPES = ["E10", "SP95", "SP98", "E85", "GPLc", "Gazole"]
 
-def _apply_services_filter(stations: list[StationSearchResult], services: list[str]) -> list[StationSearchResult]:
-    """Filter stations so that each requested service appears as a substring in the station's services list."""
+
+def _apply_services_filter(stations: list, services: list[str]) -> list:
+    """Filter stations (model or dict) so that each requested service appears in the station's services list."""
     if not services:
         return stations
     result = []
     for st in stations:
-        st_services = st.services or []
-        match = all(
-            any(req.lower() in svc.lower() for svc in st_services)
-            for req in services
-        )
-        if match:
+        st_services = (st.services if hasattr(st, "services") else st.get("services")) or []
+        if all(any(req.lower() in svc.lower() for svc in st_services) for req in services):
             result.append(st)
     return result
 
@@ -88,7 +87,7 @@ async def recommend_stations(
     results = _apply_services_filter(results, services)
 
     # Determine which fuel types to consider
-    fuel_types: list[str] = [fuel_type] if fuel_type else ["E10", "SP95", "SP98", "E85", "GPLc", "Gazole"]
+    fuel_types: list[str] = [fuel_type] if fuel_type else _ALL_FUEL_TYPES
 
     # Keep only stations that have at least one matching fuel — no hard freshness cut-off:
     # data age is already penalised in the score breakdown (freshness component).
@@ -149,7 +148,8 @@ async def route_recommend(
     try:
         route = await get_route(origin_lat, origin_lon, dest_lat, dest_lon)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Routing failed: {exc}") from exc
+        logger.warning("Routing service error: %s", exc)
+        raise HTTPException(status_code=502, detail="Routing service unavailable") from exc
 
     # 2. Search stations — use midpoint + radius covering whole route
     mid_lat = (origin_lat + dest_lat) / 2
@@ -180,16 +180,10 @@ async def route_recommend(
     )
 
     # 4. Apply services filter
-    if services:
-        filtered = []
-        for st in near:
-            st_services = st.get("services") or []
-            if all(any(req.lower() in svc.lower() for svc in st_services) for req in services):
-                filtered.append(st)
-        near = filtered
+    near = _apply_services_filter(near, services)
 
     # 5. Score
-    fuel_types: list[str] = [fuel_type] if fuel_type else ["E10", "SP95", "SP98", "E85", "GPLc", "Gazole"]
+    fuel_types: list[str] = [fuel_type] if fuel_type else _ALL_FUEL_TYPES
     route_distance_km = route["distance_m"] / 1000.0
     scored = score_stations_route(
         stations=near,

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   EventEmitter,
   Input,
   Output,
@@ -9,6 +10,7 @@ import {
 import { DecimalPipe } from '@angular/common';
 import { Station, FUEL_LABELS, ScoreBreakdown } from '../../models/station.model';
 import { openRoute } from '../../utils/navigation.util';
+import { safeBrandColor, brandInitial as getBrandInitial } from '../../utils/brand.utils';
 
 interface ScoreRow {
   key:   string;
@@ -106,10 +108,10 @@ interface ScoreRow {
                    (click)="onScoreTap($event)">
                 {{ station.score | number:'1.0-0' }}
               </div>
-              @if (scoreBreakdownRows.length > 0) {
+              @if (scoreBreakdownRows().length > 0) {
                 <div class="score-tooltip" [class.score-tooltip--visible]="showTooltip()">
                   <div class="tooltip-title">Composition du score</div>
-                  @for (c of scoreBreakdownRows; track c.key) {
+                  @for (c of scoreBreakdownRows(); track c.key) {
                     <div class="tooltip-row" [class.tooltip-row--primary]="c.key === 'price' || c.key === 'detour' || c.key === 'distance'">
                       <span class="tooltip-label">{{ c.label }}</span>
                       <div class="tooltip-bar-track">
@@ -443,11 +445,11 @@ export class StationCardComponent {
   }
 
   brandInitial(): string {
-    return (this.station.brand || this.station.name || '?').charAt(0).toUpperCase();
+    return getBrandInitial(this.station.brand || this.station.name);
   }
 
   badgeColor(): string {
-    return this.station.logo_url ? 'var(--color-bg)' : (this.station.brand_color ?? '#94a3b8');
+    return this.station.logo_url ? 'var(--color-bg)' : safeBrandColor(this.station.brand_color);
   }
 
   onLogoError(event: Event): void {
@@ -481,7 +483,7 @@ export class StationCardComponent {
     return `${name}${dist}${price}${open}`;
   }
 
-  get scoreBreakdownRows(): ScoreRow[] {
+  readonly scoreBreakdownRows = computed<ScoreRow[]>(() => {
     const bd = this.station.score_breakdown;
     if (!bd) return [];
     const defs: { key: keyof ScoreBreakdown; label: string; color: string }[] = [
@@ -494,7 +496,7 @@ export class StationCardComponent {
     return defs
       .filter(d => bd[d.key] !== undefined)
       .map(d => ({ key: d.key, label: d.label, color: d.color, value: bd[d.key] as number }));
-  }
+  });
 
   openRoute(): void {
     openRoute(this.station.location.lat, this.station.location.lon);

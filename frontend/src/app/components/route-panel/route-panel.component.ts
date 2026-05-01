@@ -424,7 +424,7 @@ export class RoutePanelComponent implements OnChanges {
     }
   ): void {
     subject$.pipe(
-      debounceTime(420),
+      debounceTime(280),
       distinctUntilChanged(),
       switchMap(q => {
         if (!q.trim()) {

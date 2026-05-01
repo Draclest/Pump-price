@@ -44,6 +44,11 @@ async def get_ingestion_status():
     """
     data = ingestion_state.to_dict()
     data["live_feed"] = live_feed_state.to_dict()
+    # Sanitize error messages — don't expose internal details to anonymous callers
+    if data.get("error"):
+        data["error"] = "Ingestion error — check server logs"
+    if data.get("live_feed", {}).get("error"):
+        data["live_feed"]["error"] = "Live feed error — check server logs"
     return data
 
 

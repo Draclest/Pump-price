@@ -140,8 +140,8 @@ app = FastAPI(
     lifespan=lifespan,
     # Disable /docs and /redoc in production to reduce attack surface.
     # Remove these lines (or set to True) during development.
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs"  if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
 )
 
 # ── Rate limiting ─────────────────────────────────────────────────────────────

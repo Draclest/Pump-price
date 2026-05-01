@@ -57,7 +57,7 @@ import { GeocodingService, AddressSuggestion } from '../../services/geocoding.se
 
       @if (showSuggestions() && suggestions().length > 0) {
         <ul class="suggestions" role="listbox" aria-label="Suggestions d'adresses">
-          @for (s of suggestions(); track s.label) {
+          @for (s of suggestions(); track $index) {
             <li class="suggestion-item" role="option" (mousedown)="select(s)">
               <svg class="sug-icon" width="13" height="13" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">

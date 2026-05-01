@@ -207,5 +207,10 @@ async def schedule_refresh(
         finally:
             _in_flight.discard(s["id"])
 
-    # Fire and forget — caller does not await this
-    asyncio.gather(*[_run_and_release(s) for s in to_refresh], return_exceptions=True)
+    # Schedule as background tasks — errors are logged inside _run_and_release
+    for s in to_refresh:
+        task = asyncio.create_task(_run_and_release(s))
+        task.add_done_callback(
+            lambda t: logger.error("Refresh task raised: %s", t.exception())
+            if not t.cancelled() and t.exception() else None
+        )

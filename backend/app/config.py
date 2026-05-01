@@ -67,16 +67,25 @@ class Settings(BaseSettings):
     osrm_url: str = "https://router.project-osrm.org"
 
     # ── Data retention ────────────────────────────────────────────────────────
-    osm_refresh_days:   int = 7
-    price_history_days: int = 30
+    osm_refresh_days:    int = 7
+    price_history_days:  int = 30
+    gov_refresh_hours:   int = 6   # refresh gov prices if older than this
+
+    # ── API docs ──────────────────────────────────────────────────────────────
+    # Set ENABLE_DOCS=false in production to hide /docs and /redoc.
+    enable_docs: bool = True
+
+    # ── Elasticsearch tuning ──────────────────────────────────────────────────
+    elasticsearch_timeout: int = 30  # seconds per request
 
     @field_validator("cors_allowed_origins")
     @classmethod
     def parse_cors_origins(cls, v: str) -> str:
-        # Validation: ensure no empty entries
         origins = [o.strip() for o in v.split(",") if o.strip()]
         if not origins:
             raise ValueError("cors_allowed_origins must contain at least one origin")
+        if "*" in origins:
+            raise ValueError("Wildcard '*' is not allowed in cors_allowed_origins — specify explicit origins")
         return v
 
     def get_cors_origins(self) -> list[str]:

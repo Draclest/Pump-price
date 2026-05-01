@@ -15,6 +15,7 @@ import { DecimalPipe } from '@angular/common';
 import * as L from 'leaflet';
 import { Station, FUEL_LABELS } from '../../models/station.model';
 import { openRoute } from '../../utils/navigation.util';
+import { safeBrandColor } from '../../utils/brand.utils';
 
 @Component({
   selector: 'app-map',
@@ -344,15 +345,15 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this._initMap();
     this._initialized = true;
     if (this.userLocation)   this._centerOnUser();
-    if (this.stations.length) this._rebuildAllMarkers();
+    if (this.stations.length) this._diffMarkers();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this._initialized) return;
     if (changes['userLocation']?.currentValue) this._centerOnUser();
-    if (changes['stations'] || changes['top3Ids']) this._rebuildAllMarkers();
-    if (changes['selectedStation'] && !changes['stations'] && !changes['top3Ids']) this._updateSelectionMarkers();
-    if (changes['highlightFuel'] && !changes['stations'] && !changes['top3Ids'])  this._rebuildAllMarkers();
+    if (changes['stations']) this._diffMarkers();
+    else if (changes['top3Ids'] || changes['highlightFuel']) this._refreshAllIcons();
+    if (changes['selectedStation'] && !changes['stations']) this._updateSelectionMarkers();
     if (changes['routeCoords']) this._updateRoutePolyline();
   }
 
@@ -384,7 +385,7 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   panelBadgeColor(): string {
-    return this.selectedStation?.logo_url ? 'var(--color-bg)' : (this.selectedStation?.brand_color ?? '#94a3b8');
+    return this.selectedStation?.logo_url ? 'var(--color-bg)' : safeBrandColor(this.selectedStation?.brand_color);
   }
 
   onPanelLogoError(event: Event): void {
@@ -435,17 +436,38 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this._map.setView([lat, lon], 13);
   }
 
-  private _rebuildAllMarkers(): void {
-    this._markers.clearLayers();
-    this._markerMap.clear();
+  private _diffMarkers(): void {
+    const incoming = new Map(this.stations.map(s => [s.id, s]));
 
+    // Remove markers no longer in the list
+    for (const [id, marker] of this._markerMap) {
+      if (!incoming.has(id)) {
+        marker.off();
+        this._markers.removeLayer(marker);
+        this._markerMap.delete(id);
+      }
+    }
+
+    // Add new markers; update icon for existing ones whose display may have changed
     for (const station of this.stations) {
-      const marker = this._createMarker(station, this.selectedStation?.id === station.id);
-      this._markers.addLayer(marker);
-      this._markerMap.set(station.id, marker);
+      const existing = this._markerMap.get(station.id);
+      if (existing) {
+        existing.setIcon(this._buildIcon(station, this.selectedStation?.id === station.id));
+      } else {
+        const marker = this._createMarker(station, this.selectedStation?.id === station.id);
+        this._markers.addLayer(marker);
+        this._markerMap.set(station.id, marker);
+      }
     }
 
     this._previousSelectedId = this.selectedStation?.id ?? null;
+  }
+
+  private _refreshAllIcons(): void {
+    for (const station of this.stations) {
+      const m = this._markerMap.get(station.id);
+      if (m) m.setIcon(this._buildIcon(station, this.selectedStation?.id === station.id));
+    }
   }
 
   private _updateSelectionMarkers(): void {

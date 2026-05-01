@@ -1186,10 +1186,6 @@ export class AppComponent implements OnInit {
     this.sheetSnap.set(2);
   }
 
-  editRoute(): void {
-    this.sheetSnap.set(2);
-  }
-
   onHandleTouchStart(e: TouchEvent): void {
     this._touchStartY    = e.touches[0].clientY;
     this._touchStartSnap = this.sheetSnap();
