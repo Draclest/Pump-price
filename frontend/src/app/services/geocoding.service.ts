@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, of } from 'rxjs';
 
 export interface AddressSuggestion {
   label: string;
@@ -14,7 +14,8 @@ export class GeocodingService {
   private apiUrl = 'https://api-adresse.data.gouv.fr/search/';
 
   search(query: string): Observable<AddressSuggestion[]> {
-    const params = new HttpParams().set('q', query).set('limit', '5').set('autocomplete', '1');
+    if (query.trim().length < 3) return of([]);
+    const params = new HttpParams().set('q', query.trim()).set('limit', '5').set('autocomplete', '1');
     return this.http.get<any>(this.apiUrl, { params }).pipe(
       map((res) =>
         (res.features ?? []).map((f: any) => ({

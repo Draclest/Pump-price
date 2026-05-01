@@ -427,8 +427,8 @@ export class RoutePanelComponent implements OnChanges {
       debounceTime(280),
       distinctUntilChanged(),
       switchMap(q => {
-        if (!q.trim()) {
-          opts.setState('idle');
+        if (q.trim().length < 3) {
+          opts.setState(q.trim().length === 0 ? 'idle' : 'idle');
           opts.setGeo(null);
           return of([]);
         }
