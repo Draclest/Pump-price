@@ -56,10 +56,11 @@ export class RoutingService {
     originLat: number; originLon: number;
     destLat: number; destLon: number;
     waypointLat: number; waypointLon: number;
+    waypointAddress?: string;
   }): string {
     const origin      = `${params.originLat},${params.originLon}`;
     const destination = `${params.destLat},${params.destLon}`;
-    const waypoint    = `${params.waypointLat},${params.waypointLon}`;
+    const waypoint    = params.waypointAddress ?? `${params.waypointLat},${params.waypointLon}`;
     return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${encodeURIComponent(waypoint)}&travelmode=driving`;
   }
 }

@@ -401,7 +401,10 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   onOpenRoute(): void {
-    if (this.selectedStation) openRoute(this.selectedStation.location.lat, this.selectedStation.location.lon);
+    if (this.selectedStation) {
+      const s = this.selectedStation;
+      openRoute(`${s.address}, ${s.postal_code} ${s.city}`, s.location.lat, s.location.lon);
+    }
   }
 
   // ── Private: map logic ────────────────────────────────────────────────

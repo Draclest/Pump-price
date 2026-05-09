@@ -244,12 +244,13 @@ export class AppStateService {
     const dest   = this.routeDest();
     if (!origin || !dest) return;
     const url = this.routingService.exportToGoogleMaps({
-      originLat:   origin.lat,
-      originLon:   origin.lon,
-      destLat:     dest.lat,
-      destLon:     dest.lon,
-      waypointLat: station.location.lat,
-      waypointLon: station.location.lon,
+      originLat:       origin.lat,
+      originLon:       origin.lon,
+      destLat:         dest.lat,
+      destLon:         dest.lon,
+      waypointLat:     station.location.lat,
+      waypointLon:     station.location.lon,
+      waypointAddress: `${station.address}, ${station.postal_code} ${station.city}`,
     });
     window.open(url, '_blank');
   }

@@ -468,5 +468,8 @@ export class StationCardComponent {
       .map(d => ({ key: d.key, label: d.label, color: d.color, value: bd[d.key] as number }));
   });
 
-  openRoute(): void { openRoute(this.station.location.lat, this.station.location.lon); }
+  openRoute(): void {
+    const addr = `${this.station.address}, ${this.station.postal_code} ${this.station.city}`;
+    openRoute(addr, this.station.location.lat, this.station.location.lon);
+  }
 }
