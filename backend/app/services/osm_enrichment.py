@@ -292,6 +292,9 @@ def cross_reference(
         matched_osm_ids.add(osm["osm_id"])
         fields = extract_osm_fields(osm)
 
+        # OSM coordinates are surveyed on the ground — replace imprecise gov coords
+        station["location"] = {"lat": osm["lat"], "lon": osm["lon"]}
+
         # Gov has priority: only fill missing fields
         if not station.get("name"):
             station["name"] = fields["_osm_name"]
