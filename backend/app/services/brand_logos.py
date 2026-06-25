@@ -38,31 +38,6 @@ BRAND_LOGOS: dict[str, str] = {
     "petroplus":     "https://logo.clearbit.com/petroplus.fr",
 }
 
-# Brand display names (human-readable, shown in UI)
-BRAND_DISPLAY_NAMES: dict[str, str] = {
-    "totalenergies": "TotalEnergies",
-    "bp":            "BP",
-    "shell":         "Shell",
-    "esso":          "Esso",
-    "avia":          "Avia",
-    "q8":            "Q8",
-    "gulf":          "Gulf",
-    "leclerc":       "E.Leclerc",
-    "intermarche":   "Intermarché",
-    "carrefour":     "Carrefour",
-    "systeme-u":     "Système U",
-    "auchan":        "Auchan",
-    "casino":        "Casino",
-    "lidl":          "Lidl",
-    "netto":         "Netto",
-    "colruyt":       "Colruyt",
-    "agip":          "Agip / Eni",
-    "dyneff":        "Dyneff",
-    "elan":          "Elan",
-    "vito":          "Vito",
-    "petroplus":     "Pétroplus",
-}
-
 # Brand accent colors (used as fallback badge background)
 BRAND_COLORS: dict[str, str] = {
     "totalenergies": "#D00027",
@@ -86,12 +61,6 @@ def get_logo_url(brand_key: Optional[str]) -> Optional[str]:
     if not brand_key:
         return None
     return BRAND_LOGOS.get(brand_key)
-
-
-def get_display_name(brand_key: Optional[str], fallback: Optional[str] = None) -> Optional[str]:
-    if not brand_key:
-        return fallback
-    return BRAND_DISPLAY_NAMES.get(brand_key, fallback)
 
 
 def get_brand_color(brand_key: Optional[str]) -> Optional[str]:

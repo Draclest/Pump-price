@@ -19,7 +19,7 @@
 |--------|------------|
 | Backend | Python 3.12 · FastAPI 0.115 · uvicorn |
 | Stockage | Elasticsearch 8 (index `fuel-stations` + `fuel-price-history`) |
-| Frontend | Angular 18 (standalone, signals) · Leaflet (tiles OSM) |
+| Frontend | Angular 17 (standalone, signals) · Leaflet (tiles OSM) |
 | Infra | Docker Compose · Nginx (reverse proxy + CSP) |
 | Observabilité | OpenTelemetry SDK (traces + métriques + logs, OTLP HTTP port 4318) |
 | Données | data.gouv.fr (quotidien + flux instantané v2) · OpenStreetMap Overpass |
@@ -65,16 +65,19 @@ prix à la pompe/
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/app/
-│   │   ├── app.component.ts         # Shell : sidebar desktop + bottom sheet mobile
+│   │   ├── app.component.ts         # Shell : sidebar desktop + sheet mobile à surface unique (template + logique)
+│   │   ├── app.component.scss       # Styles du shell (extraits de l'inline)
 │   │   ├── app.config.ts            # Bootstrap Angular standalone
 │   │   ├── models/station.model.ts  # Interfaces TS : Station, FuelPrice, SortBy, FilterValues
 │   │   ├── components/
 │   │   │   ├── map/                 # Leaflet, markers diff, ResizeObserver, invalidateSize
 │   │   │   ├── station-card/        # Card résultat avec score, prix hero, actions
-│   │   │   ├── filters/             # Carburant, rayon, prix max, services
+│   │   │   ├── station-list/        # Sections top-3 + autres + état vide (dédupliqué, desktop & mobile)
+│   │   │   ├── filters/             # Carburant, rayon, prix max, services (inline only)
 │   │   │   ├── address-search/      # Autocomplétion api-adresse.data.gouv.fr
 │   │   │   ├── route-panel/         # Saisie départ/arrivée, détour max
-│   │   │   └── price-history/       # Graphique SVG Catmull-Rom des prix historiques
+│   │   │   ├── price-history/       # Graphique SVG Catmull-Rom des prix historiques
+│   │   │   └── ui/                  # IconComponent (registre SVG), SortBarComponent
 │   │   ├── services/
 │   │   │   ├── app-state.service.ts     # Source de vérité unique (signals Angular)
 │   │   │   ├── station.service.ts       # HTTP → /api/v1/stations
@@ -143,19 +146,19 @@ Après chaque réponse `/recommend`, les stations périmées sont re-fetchées s
 
 | Critère | Poids | Calcul |
 |---------|-------|--------|
-| Prix | 40% | `gap = price - min_price` ; zéro si gap ≥ 1.00 €/L |
-| Distance | 30% | Haversine vs. rayon demandé |
-| Fraîcheur | 20% | 1.0 si < 1h → linéaire → 0.0 à 168h |
-| Services | 10% | Ouvert 0.35 + CB 0.30 + Boutique 0.20 + Lavage 0.10 + Toilettes 0.05 |
+| Prix | 60% | `gap = price - min_price` ; zéro si gap ≥ 1.00 €/L |
+| Distance | 35% | Haversine vs. rayon demandé |
+| Fraîcheur | 4% | 1.0 si < 1h → linéaire → 0.0 à 168h |
+| Services | 1% | Ouvert 0.35 + CB 0.30 + Boutique 0.20 + Lavage 0.10 + Toilettes 0.05 |
 
 ### Mode "Route"
 
 | Critère | Poids |
 |---------|-------|
 | Prix | 60% |
-| Détour (`detour_km`) | 25% |
-| Fraîcheur | 10% |
-| Services | 5% |
+| Détour (`detour_km`) | 35% |
+| Fraîcheur | 4% |
+| Services | 1% |
 
 Free zone détour : ≤ 3% de la longueur du trajet = score 100.
 
@@ -208,18 +211,18 @@ Tri côté client `_sortStations()` :
 
 ### AppComponent — layout
 
-**Desktop** : sidebar 380px fixe à gauche + `map-area` flex:1.
-**Mobile** : carte plein écran absolu + bottom sheet 3 snaps (`sheetSnap: Signal<0|1|2>`) :
-- Snap 0 : peek 80px
-- Snap 1 : half 48vh
-- Snap 2 : full
+Le template d'`AppComponent` ne fait plus que **câbler** `AppStateService` à des composants réutilisables (`app-station-list`, `app-sort-bar`, `app-icon`, `app-filters`, `app-address-search`, `app-route-panel`, `app-map`). Aucune liste de stations ni icône SVG n'est dupliquée. Styles dans `app.component.scss`.
 
-Topbar mobile glassmorphism : `backdrop-filter: blur(20px) saturate(1.8)` + `rgba(255,255,255,0.92)`.
+**Desktop** : sidebar 380px fixe à gauche + `map-area` flex:1. Recherche/itinéraire, sort-bar, filtres dépliables, résultats (`app-station-list`).
 
-Sort bar desktop : entre la recherche d'adresse et les filtres.
-Sort bar mobile : apparaît entre le sheet-handle et le body quand des résultats existent.
+**Mobile (≤1024px) — modèle à surface unique (type Maps)** : carte plein écran + **une seule feuille persistante** (`sheetSnap: Signal<0|1|2>`) :
+- Snap 0 collapsed (peek ~156px) · Snap 1 mid (52dvh) · Snap 2 full
+- **En-tête de feuille toujours visible** : segmented control mode (Proximité | Itinéraire) + recherche persistante (nearby = `app-address-search`, focus → snap full ; route = pill résumé → snap full révélant `app-route-panel`).
+- **Sous-en-tête** (sous le pli du peek) : `app-sort-bar` (si résultats) sinon libellé d'état, + bouton Filtres (modal).
+- **FAB carte** « Me localiser » flottant en bas-droite, au-dessus du peek.
+- Plus de bottom-nav ni de topbar flottante séparées : tout est dans la feuille.
 
-**Règle Angular** : effets qui écrivent dans un signal → `{ allowSignalWrites: true }`.
+**Machine à snaps** : un effet unique (précédence sélection → formulaire itinéraire → résultats frais) + drag/clic sur le handle. Effets qui écrivent un signal → `{ allowSignalWrites: true }`.
 
 ### MapComponent — Leaflet
 
