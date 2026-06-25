@@ -18,198 +18,102 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
   { label: 'Toilettes',   value: 'Toilettes' },
 ];
 
+/**
+ * Inline filter controls (fuel type, radius, max price, services).
+ * Always embedded by the parent (sidebar panel or mobile modal); the parent
+ * owns the surrounding chrome (title bar, close button).
+ */
 @Component({
   selector: 'app-filters',
   standalone: true,
   imports: [FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (drawerMode) {
-      <div class="filters-backdrop" (click)="closed.emit()" aria-hidden="true"></div>
-    }
+    <div class="filters-body" role="group" aria-label="Filtres de recherche">
 
-    <div class="filters-drawer" [class.filters-drawer--inline]="!drawerMode"
-         role="dialog" [attr.aria-modal]="drawerMode ? 'true' : null"
-         aria-label="Filtres de recherche">
-
-      @if (drawerMode) {
-        <div class="drawer-header">
-          <span class="drawer-title">Filtres</span>
-          <button class="drawer-close" (click)="closed.emit()" aria-label="Fermer les filtres">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-      }
-
-      <div class="drawer-body" [class.drawer-body--inline]="!drawerMode">
-
-        <!-- Fuel type -->
-        <div class="filter-section">
-          <label class="section-label">Type de carburant</label>
-          <div class="chip-group" role="group" aria-label="Type de carburant">
-            @for (fuel of allFuelOptions; track fuel) {
-              <button class="chip" type="button"
-                      [class.chip--active]="values.fuelType === fuel"
-                      [attr.aria-pressed]="values.fuelType === fuel"
-                      (click)="selectFuel(fuel)">
-                {{ fuelLabels[fuel] }}
-              </button>
-            }
-          </div>
-          @if (currentFuelNote) {
-            <p class="fuel-note">{{ currentFuelNote }}</p>
+      <!-- Fuel type -->
+      <div class="filter-section">
+        <label class="section-label">Type de carburant</label>
+        <div class="chip-group" role="group" aria-label="Type de carburant">
+          @for (fuel of allFuelOptions; track fuel) {
+            <button class="chip" type="button"
+                    [class.chip--active]="values.fuelType === fuel"
+                    [attr.aria-pressed]="values.fuelType === fuel"
+                    (click)="selectFuel(fuel)">
+              {{ fuelLabels[fuel] }}
+            </button>
           }
         </div>
-
-        <!-- Radius -->
-        <div class="filter-section">
-          <div class="section-label-row">
-            <label class="section-label" for="radius-input">Rayon de recherche</label>
-            <span class="section-value">{{ values.radiusKm }} km</span>
-          </div>
-          <div class="slider-wrap">
-            <input id="radius-input" type="range" class="slider"
-                   min="1" max="50" step="1"
-                   [(ngModel)]="values.radiusKm" (ngModelChange)="emit()"
-                   [attr.aria-valuemin]="1" [attr.aria-valuemax]="50"
-                   [attr.aria-valuenow]="values.radiusKm"
-                   [attr.aria-valuetext]="values.radiusKm + ' kilomètres'" />
-            <div class="slider-labels">
-              <span>1 km</span>
-              <span>50 km</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Max price -->
-        <div class="filter-section">
-          <label class="section-label" for="price-input">Prix maximum (€/L)</label>
-          <div class="price-row">
-            <div class="price-input-wrap" [class.price-input-wrap--active]="values.maxPrice !== null">
-              <span class="price-prefix">≤</span>
-              <input id="price-input" type="number" class="price-input"
-                     min="0" max="5" step="0.01"
-                     [ngModel]="values.maxPrice" (ngModelChange)="onMaxPriceChange($event)"
-                     placeholder="Illimité"
-                     aria-label="Prix maximum en euros par litre" />
-              @if (values.maxPrice !== null) {
-                <span class="price-suffix">€/L</span>
-              }
-            </div>
-            @if (values.maxPrice !== null) {
-              <button class="price-clear" type="button"
-                      (click)="clearPrice()" aria-label="Supprimer le prix maximum">
-                Effacer
-              </button>
-            }
-          </div>
-        </div>
-
-        <!-- Services -->
-        <div class="filter-section">
-          <label class="section-label">Services</label>
-          <div class="checkbox-group">
-            @for (svc of serviceOptions; track svc.value) {
-              <label class="checkbox-label" [class.checkbox-label--active]="isServiceSelected(svc.value)">
-                <input type="checkbox" class="checkbox-input"
-                       [checked]="isServiceSelected(svc.value)"
-                       (change)="toggleService(svc.value)"
-                       [attr.aria-label]="svc.label" />
-                <span class="checkbox-mark"></span>
-                <span class="checkbox-text">{{ svc.label }}</span>
-              </label>
-            }
-          </div>
-        </div>
-
+        @if (currentFuelNote) {
+          <p class="fuel-note">{{ currentFuelNote }}</p>
+        }
       </div>
 
-      @if (drawerMode) {
-        <div class="drawer-footer">
-          <button class="btn-reset" type="button" (click)="reset()">Réinitialiser</button>
-          <button class="btn-apply" type="button" (click)="closed.emit()">Appliquer</button>
+      <!-- Radius -->
+      <div class="filter-section">
+        <div class="section-label-row">
+          <label class="section-label" for="radius-input">Rayon de recherche</label>
+          <span class="section-value">{{ values.radiusKm }} km</span>
         </div>
-      }
+        <div class="slider-wrap">
+          <input id="radius-input" type="range" class="slider"
+                 min="1" max="50" step="1"
+                 [(ngModel)]="values.radiusKm" (ngModelChange)="emit()"
+                 [attr.aria-valuemin]="1" [attr.aria-valuemax]="50"
+                 [attr.aria-valuenow]="values.radiusKm"
+                 [attr.aria-valuetext]="values.radiusKm + ' kilomètres'" />
+          <div class="slider-labels">
+            <span>1 km</span>
+            <span>50 km</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Max price -->
+      <div class="filter-section">
+        <label class="section-label" for="price-input">Prix maximum (€/L)</label>
+        <div class="price-row">
+          <div class="price-input-wrap" [class.price-input-wrap--active]="values.maxPrice !== null">
+            <span class="price-prefix">≤</span>
+            <input id="price-input" type="number" class="price-input"
+                   min="0" max="5" step="0.01"
+                   [ngModel]="values.maxPrice" (ngModelChange)="onMaxPriceChange($event)"
+                   placeholder="Illimité"
+                   aria-label="Prix maximum en euros par litre" />
+            @if (values.maxPrice !== null) {
+              <span class="price-suffix">€/L</span>
+            }
+          </div>
+          @if (values.maxPrice !== null) {
+            <button class="price-clear" type="button"
+                    (click)="clearPrice()" aria-label="Supprimer le prix maximum">
+              Effacer
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Services -->
+      <div class="filter-section">
+        <label class="section-label">Services</label>
+        <div class="checkbox-group">
+          @for (svc of serviceOptions; track svc.value) {
+            <label class="checkbox-label" [class.checkbox-label--active]="isServiceSelected(svc.value)">
+              <input type="checkbox" class="checkbox-input"
+                     [checked]="isServiceSelected(svc.value)"
+                     (change)="toggleService(svc.value)"
+                     [attr.aria-label]="svc.label" />
+              <span class="checkbox-mark"></span>
+              <span class="checkbox-text">{{ svc.label }}</span>
+            </label>
+          }
+        </div>
+      </div>
+
     </div>
   `,
   styles: [`
-    .filters-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.4);
-      z-index: 40;
-      animation: fade-in 0.2s ease;
-    }
-
-    @keyframes fade-in {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-
-    .filters-drawer {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: var(--color-surface);
-      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-      box-shadow: var(--shadow-sheet);
-      z-index: 50;
-      display: flex;
-      flex-direction: column;
-      max-height: 85vh;
-      animation: slide-up 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    .filters-drawer--inline {
-      position: static;
-      border-radius: 0;
-      box-shadow: none;
-      animation: none;
-      max-height: none;
-      background: transparent;
-    }
-
-    @keyframes slide-up {
-      from { transform: translateY(100%); }
-      to   { transform: translateY(0); }
-    }
-
-    .drawer-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-4) var(--space-4) var(--space-3);
-      border-bottom: 1px solid var(--color-border-subtle);
-    }
-
-    .drawer-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-text-primary); letter-spacing: -0.3px; }
-
-    .drawer-close {
-      width: 32px; height: 32px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: var(--color-bg);
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background var(--transition-fast);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .drawer-close:active { background: var(--color-border); }
-
-    .drawer-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: var(--space-4);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-5);
-    }
-
-    .drawer-body--inline { overflow-y: visible; padding: 0; }
+    .filters-body { display: flex; flex-direction: column; gap: var(--space-5); }
 
     .filter-section { display: flex; flex-direction: column; gap: var(--space-3); }
 
@@ -362,43 +266,6 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
     .checkbox-text { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text-secondary); }
     .checkbox-label--active .checkbox-text { color: var(--color-primary-dark); }
 
-    .drawer-footer {
-      display: flex;
-      gap: var(--space-3);
-      padding: var(--space-3) var(--space-4);
-      border-top: 1px solid var(--color-border-subtle);
-    }
-
-    .btn-reset {
-      flex: 1; padding: 11px 0;
-      border-radius: var(--radius-md);
-      border: 1.5px solid var(--color-border);
-      background: var(--color-surface);
-      font-size: var(--font-size-sm);
-      font-family: var(--font-family);
-      font-weight: 600;
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      transition: all var(--transition-fast);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-reset:active { background: var(--color-bg); }
-
-    .btn-apply {
-      flex: 2; padding: 11px 0;
-      border-radius: var(--radius-md);
-      border: none;
-      background: var(--color-primary);
-      font-size: var(--font-size-sm);
-      font-family: var(--font-family);
-      font-weight: 700;
-      color: var(--color-text-on-primary);
-      cursor: pointer;
-      transition: background var(--transition-fast);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-apply:active { background: var(--color-primary-dark); }
-
     .fuel-note {
       margin: 8px 0 0;
       font-size: 11px;
@@ -413,9 +280,7 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
 })
 export class FiltersComponent {
   @Input() values: FilterValues = { fuelType: 'E10', radiusKm: 10, maxPrice: null, services: [] };
-  @Input() drawerMode = true;
   @Output() readonly changed = new EventEmitter<FilterValues>();
-  @Output() readonly closed  = new EventEmitter<void>();
 
   readonly allFuelOptions: FuelTypeOrAll[] = ['Tous', ...FUEL_TYPES];
   readonly fuelLabels    = FUEL_LABELS;
@@ -450,11 +315,6 @@ export class FiltersComponent {
       ? current.filter(s => s !== value)
       : [...current, value];
     this.values = { ...this.values, services: next };
-    this.emit();
-  }
-
-  reset(): void {
-    this.values = { fuelType: 'E10', radiusKm: 10, maxPrice: null, services: [] };
     this.emit();
   }
 
