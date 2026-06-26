@@ -374,7 +374,9 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
     }
 
     @if (state.historyStation()) {
-      <app-price-history [station]="state.historyStation()!" (close)="state.historyStation.set(null)"></app-price-history>
+      <app-price-history [station]="state.historyStation()!"
+                         [preferredFuel]="state.filters().fuelType !== 'Tous' ? state.filters().fuelType : null"
+                         (close)="state.historyStation.set(null)"></app-price-history>
     }
 
     </div><!-- /app-wrapper -->
