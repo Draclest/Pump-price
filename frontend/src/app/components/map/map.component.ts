@@ -169,6 +169,15 @@ import { safeBrandColor } from '../../utils/brand.utils';
       animation: panel-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
+    /* Desktop map-first : the search panel floats top-left (16px + 396px wide),
+       so anchor the station detail card clear of it, bottom-left of the map. */
+    @media (min-width: 1025px) {
+      .station-panel {
+        left: 428px; right: auto; bottom: 16px;
+        width: min(520px, calc(100vw - 428px - 16px));
+      }
+    }
+
     @keyframes panel-in {
       from { transform: translateY(24px) scale(0.97); opacity: 0; }
       to   { transform: translateY(0)    scale(1);    opacity: 1; }
