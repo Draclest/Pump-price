@@ -12,8 +12,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
+import { of } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { Station } from '../../models/station.model';
 import { PriceHistoryService, FuelHistory } from '../../services/price-history.service';
+import { StationService } from '../../services/station.service';
 
 @Component({
   selector: 'app-price-history',
@@ -593,6 +596,7 @@ export class PriceHistoryComponent implements OnInit {
   @Output() readonly close = new EventEmitter<void>();
 
   private readonly historyService = inject(PriceHistoryService);
+  private readonly stationService = inject(StationService);
   private readonly destroyRef     = inject(DestroyRef);
 
   readonly loading       = signal(true);
@@ -611,10 +615,19 @@ export class PriceHistoryComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const fuelTypes = this.station.fuels.map(f => f.type);
-
-    this.historyService.getHistory(this.station.id, fuelTypes)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    // On récupère d'abord la station COMPLÈTE par id : l'endpoint /stations/{id}
+    // ne filtre pas les carburants (contrairement à la liste, restreinte au filtre
+    // actif). On affiche ainsi l'historique de TOUS les carburants de la station.
+    this.stationService.getStation(this.station.id)
+      .pipe(
+        catchError(() => of(this.station)),
+        switchMap(full => {
+          const fuelTypes = (full.fuels?.length ? full.fuels : this.station.fuels)
+            .map(f => f.type);
+          return this.historyService.getHistory(this.station.id, fuelTypes);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: histories => {
           this.fuelHistories.set(histories);
