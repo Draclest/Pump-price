@@ -170,6 +170,12 @@ html, body {
 .leaflet-control-zoom a:last-child { border-bottom: none !important; }
 .leaflet-control-zoom a:hover { background: var(--color-surface-3) !important; color: var(--color-primary) !important; }
 
+/* Map-first desktop: the search panel floats top-left, so push the top-left
+   Leaflet controls (zoom) clear of it. Mobile keeps the default position. */
+@media (min-width: 1025px) {
+  .leaflet-top.leaflet-left { left: 428px; }
+}
+
 /* ─── Map Markers v2 ─────────────────────────────────────────────────────── */
 .map-marker {
   background: var(--color-surface);
