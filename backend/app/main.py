@@ -25,7 +25,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
-from app.api import stations, ingestion
+from app.api import stations, ingestion, net_gain
 from app.api.deps import get_es, close_es
 from app.workers.ingestion import run_ingestion
 from app.workers.live_feed import run_live_feed
@@ -221,6 +221,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 # ── Routes ────────────────────────────────────────────────────────────────────
 app.include_router(stations.router,  prefix="/api/v1")
 app.include_router(ingestion.router, prefix="/api/v1")
+app.include_router(net_gain.router,  prefix="/api/v2")
 
 
 @app.get("/health", tags=["system"])
