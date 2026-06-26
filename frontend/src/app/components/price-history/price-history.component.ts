@@ -6,6 +6,7 @@ import {
   Input,
   OnInit,
   Output,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -55,20 +56,23 @@ import { PriceHistoryService, FuelHistory } from '../../services/price-history.s
       <div class="modal-body">
 
         @if (loading()) {
-          @for (_ of [1, 2]; track $index) {
-            <div class="sk-card">
-              <div class="sk-card-header">
-                <div class="sk-block" style="width:80px;height:18px;border-radius:6px"></div>
-                <div class="sk-block" style="width:110px;height:28px;border-radius:8px"></div>
-              </div>
-              <div class="sk-stats-row">
-                @for (__ of [1,2,3]; track $index) {
-                  <div class="sk-block" style="flex:1;height:44px;border-radius:10px"></div>
-                }
-              </div>
-              <div class="sk-block" style="height:160px;border-radius:12px;margin-top:4px"></div>
+          <div class="sk-tabs">
+            @for (_ of [1,2,3,4]; track $index) {
+              <div class="sk-block" style="flex:1;height:52px;border-radius:12px"></div>
+            }
+          </div>
+          <div class="sk-card">
+            <div class="sk-card-header">
+              <div class="sk-block" style="width:90px;height:20px;border-radius:6px"></div>
+              <div class="sk-block" style="width:120px;height:30px;border-radius:8px"></div>
             </div>
-          }
+            <div class="sk-stats-row">
+              @for (__ of [1,2,3,4]; track $index) {
+                <div class="sk-block" style="flex:1;height:44px;border-radius:10px"></div>
+              }
+            </div>
+            <div class="sk-block" style="height:240px;border-radius:12px;margin-top:4px"></div>
+          </div>
         }
 
         @if (!loading() && error()) {
@@ -97,139 +101,174 @@ import { PriceHistoryService, FuelHistory } from '../../services/price-history.s
           </div>
         }
 
-        @for (fh of fuelHistories(); track fh.type; let fi = $index) {
-          <div class="fuel-card">
+        @if (!loading() && !error() && fuelHistories().length > 0) {
 
-            <!-- Card header: fuel name + trend + current price -->
-            <div class="fc-header">
-              <div class="fc-title-row">
-                <span class="fc-name">{{ fh.label }}</span>
-                <span class="fc-trend-badge" [class]="'fc-trend-badge--' + fh.trend"
-                      [attr.aria-label]="trendLabel(fh.trend)">
-                  @if (fh.trend === 'up') {
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
-                    Hausse
-                  }
-                  @if (fh.trend === 'down') {
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                    Baisse
-                  }
-                  @if (fh.trend === 'stable') {
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Stable
-                  }
+          <!-- Fuel selector tabs -->
+          <div class="fc-tabs" role="tablist" aria-label="Choisir un carburant">
+            @for (fh of fuelHistories(); track fh.type) {
+              <button type="button" class="fc-tab"
+                      [class.fc-tab--active]="fh.type === activeType()"
+                      role="tab" [id]="'fuel-tab-' + fh.type"
+                      [attr.aria-selected]="fh.type === activeType()"
+                      [attr.tabindex]="fh.type === activeType() ? 0 : -1"
+                      [attr.aria-controls]="'fuel-panel'"
+                      (click)="selectFuel(fh.type)"
+                      (keydown)="onTabKeydown($event)">
+                <span class="fc-tab-name">{{ fh.label }}</span>
+                <span class="fc-tab-bottom">
+                  <span class="fc-tab-price">{{ fh.latest.toFixed(3) }}<small>€</small></span>
+                  <span class="fc-tab-trend" [class]="'fc-tab-trend--' + fh.trend"
+                        [attr.aria-label]="trendLabel(fh.trend)">
+                    @if (fh.trend === 'up') {
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+                    } @else if (fh.trend === 'down') {
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    } @else {
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    }
+                  </span>
                 </span>
-              </div>
-              <div class="fc-price-now">
-                <span class="fc-price-value">{{ fh.latest.toFixed(3) }}</span>
-                <span class="fc-price-unit">€/L</span>
-              </div>
-            </div>
-
-            <!-- Stats pills -->
-            <div class="fc-stats">
-              <div class="fc-stat">
-                <span class="fc-stat-label">Min</span>
-                <span class="fc-stat-value fc-stat-value--good">{{ fh.min.toFixed(3) }} €</span>
-              </div>
-              <div class="fc-stat-sep"></div>
-              <div class="fc-stat">
-                <span class="fc-stat-label">Moy</span>
-                <span class="fc-stat-value">{{ midPrice(fh).toFixed(3) }} €</span>
-              </div>
-              <div class="fc-stat-sep"></div>
-              <div class="fc-stat">
-                <span class="fc-stat-label">Max</span>
-                <span class="fc-stat-value fc-stat-value--high">{{ fh.max.toFixed(3) }} €</span>
-              </div>
-              <div class="fc-stat-sep"></div>
-              <div class="fc-stat">
-                <span class="fc-stat-label">Points</span>
-                <span class="fc-stat-value">{{ fh.records.length }}</span>
-              </div>
-            </div>
-
-            <!-- Chart -->
-            <div class="fc-chart-wrap" (mouseleave)="hoveredPoint.set(null)"
-                 role="img" [attr.aria-label]="chartAriaLabel(fh)">
-
-              <svg class="fc-svg" [attr.viewBox]="'0 0 ' + W + ' ' + H"
-                   preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <defs>
-                  <linearGradient [attr.id]="'grad-' + fi" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stop-color="#16a34a" stop-opacity="0.22"/>
-                    <stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
-                  </linearGradient>
-                </defs>
-
-                <!-- Grid lines -->
-                <line [attr.x1]="0" [attr.y1]="PAD_TOP"       [attr.x2]="W" [attr.y2]="PAD_TOP"       class="grid-line"/>
-                <line [attr.x1]="0" [attr.y1]="H/2"           [attr.x2]="W" [attr.y2]="H/2"           class="grid-line"/>
-                <line [attr.x1]="0" [attr.y1]="H - PAD_BOT"   [attr.x2]="W" [attr.y2]="H - PAD_BOT"   class="grid-line"/>
-
-                <!-- Vertical cursor line -->
-                @if (hoveredPoint() && hoveredPoint()!.fuelIdx === fi) {
-                  <line class="cursor-line"
-                        [attr.x1]="pointX(hoveredPoint()!.pointIdx, fh.records.length)"
-                        [attr.y1]="PAD_TOP"
-                        [attr.x2]="pointX(hoveredPoint()!.pointIdx, fh.records.length)"
-                        [attr.y2]="H - PAD_BOT"/>
-                }
-
-                <!-- Area -->
-                @if (fh.records.length > 1) {
-                  <path [attr.d]="smoothAreaPath(fh)" [attr.fill]="'url(#grad-' + fi + ')'"/>
-                }
-
-                <!-- Line -->
-                @if (fh.records.length > 1) {
-                  <path [attr.d]="smoothLinePath(fh)" class="fc-line"/>
-                }
-
-                <!-- Dots + hit areas -->
-                @for (r of fh.records; track r.recorded_at; let i = $index; let last = $last) {
-                  <g (mouseenter)="hoveredPoint.set({ fuelIdx: fi, pointIdx: i, price: r.price, date: r.recorded_at })"
-                     [attr.transform]="'translate(' + pointX(i, fh.records.length).toFixed(1) + ',' + pointY(r.price, fh.min, fh.max).toFixed(1) + ')'">
-                    <rect x="-16" y="-50" width="32" height="100" fill="transparent"/>
-                    <circle class="fc-dot"
-                            [class.fc-dot--latest]="last"
-                            [class.fc-dot--hovered]="hoveredPoint()?.fuelIdx === fi && hoveredPoint()?.pointIdx === i"
-                            r="3.5"/>
-                  </g>
-                }
-              </svg>
-
-              <!-- Y-axis labels (overlaid on the left) -->
-              <div class="fc-y-axis">
-                <span>{{ fh.max.toFixed(2) }}</span>
-                <span>{{ midPrice(fh).toFixed(2) }}</span>
-                <span>{{ fh.min.toFixed(2) }}</span>
-              </div>
-
-              <!-- Tooltip -->
-              @if (hoveredPoint() && hoveredPoint()!.fuelIdx === fi) {
-                <div class="fc-tooltip"
-                     [style.left.%]="tooltipLeft(hoveredPoint()!.pointIdx, fh.records.length)"
-                     [class.fc-tooltip--flip]="hoveredPoint()!.pointIdx >= fh.records.length - 2">
-                  <span class="fc-tooltip-price">{{ hoveredPoint()!.price.toFixed(3) }} €/L</span>
-                  <span class="fc-tooltip-date">{{ formatDate(hoveredPoint()!.date) }}</span>
-                  <span class="fc-tooltip-arrow"></span>
-                </div>
-              }
-
-              <!-- X-axis dates -->
-              <div class="fc-x-axis">
-                @for (r of fh.records; track r.recorded_at; let i = $index) {
-                  @if (shouldShowXLabel(i, fh.records.length)) {
-                    <span class="fc-x-label" [style.left.%]="tooltipLeft(i, fh.records.length)">
-                      {{ formatShortDate(r.recorded_at) }}
-                    </span>
-                  }
-                }
-              </div>
-            </div>
-
+              </button>
+            }
           </div>
+
+          <!-- Active fuel panel -->
+          @if (activeFuel(); as fh) {
+            <div class="fuel-card" id="fuel-panel" role="tabpanel"
+                 [attr.aria-labelledby]="'fuel-tab-' + fh.type">
+
+              <!-- Card header: fuel name + trend + current price -->
+              <div class="fc-header">
+                <div class="fc-title-row">
+                  <span class="fc-name">{{ fh.label }}</span>
+                  <span class="fc-trend-badge" [class]="'fc-trend-badge--' + fh.trend"
+                        [attr.aria-label]="trendLabel(fh.trend)">
+                    @if (fh.trend === 'up') {
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+                      Hausse
+                    }
+                    @if (fh.trend === 'down') {
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                      Baisse
+                    }
+                    @if (fh.trend === 'stable') {
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      Stable
+                    }
+                  </span>
+                </div>
+                <div class="fc-price-now">
+                  <span class="fc-price-value">{{ fh.latest.toFixed(3) }}</span>
+                  <span class="fc-price-unit">€/L</span>
+                </div>
+              </div>
+
+              <!-- Stats pills -->
+              <div class="fc-stats">
+                <div class="fc-stat">
+                  <span class="fc-stat-label">Min</span>
+                  <span class="fc-stat-value fc-stat-value--good">{{ fh.min.toFixed(3) }} €</span>
+                </div>
+                <div class="fc-stat-sep"></div>
+                <div class="fc-stat">
+                  <span class="fc-stat-label">Moy</span>
+                  <span class="fc-stat-value">{{ midPrice(fh).toFixed(3) }} €</span>
+                </div>
+                <div class="fc-stat-sep"></div>
+                <div class="fc-stat">
+                  <span class="fc-stat-label">Max</span>
+                  <span class="fc-stat-value fc-stat-value--high">{{ fh.max.toFixed(3) }} €</span>
+                </div>
+                <div class="fc-stat-sep"></div>
+                <div class="fc-stat">
+                  <span class="fc-stat-label">Points</span>
+                  <span class="fc-stat-value">{{ fh.records.length }}</span>
+                </div>
+              </div>
+
+              <!-- Chart -->
+              <div class="fc-chart-wrap" (mouseleave)="hoveredPoint.set(null)"
+                   role="img" [attr.aria-label]="chartAriaLabel(fh)">
+
+                @if (fh.records.length > 1) {
+                  <svg class="fc-svg" [attr.viewBox]="'0 0 ' + W + ' ' + H"
+                       preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="grad-active" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%"   stop-color="#16a34a" stop-opacity="0.22"/>
+                        <stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
+                      </linearGradient>
+                    </defs>
+
+                    <!-- Grid lines -->
+                    <line [attr.x1]="0" [attr.y1]="PAD_TOP"       [attr.x2]="W" [attr.y2]="PAD_TOP"       class="grid-line"/>
+                    <line [attr.x1]="0" [attr.y1]="H/2"           [attr.x2]="W" [attr.y2]="H/2"           class="grid-line"/>
+                    <line [attr.x1]="0" [attr.y1]="H - PAD_BOT"   [attr.x2]="W" [attr.y2]="H - PAD_BOT"   class="grid-line"/>
+
+                    <!-- Vertical cursor line -->
+                    @if (hoveredPoint(); as hp) {
+                      <line class="cursor-line"
+                            [attr.x1]="pointX(hp.pointIdx, fh.records.length)"
+                            [attr.y1]="PAD_TOP"
+                            [attr.x2]="pointX(hp.pointIdx, fh.records.length)"
+                            [attr.y2]="H - PAD_BOT"/>
+                    }
+
+                    <!-- Area + line -->
+                    <path [attr.d]="smoothAreaPath(fh)" fill="url(#grad-active)"/>
+                    <path [attr.d]="smoothLinePath(fh)" class="fc-line"/>
+
+                    <!-- Dots + hit areas -->
+                    @for (r of fh.records; track r.recorded_at; let i = $index; let last = $last) {
+                      <g (mouseenter)="hoveredPoint.set({ pointIdx: i, price: r.price, date: r.recorded_at })"
+                         [attr.transform]="'translate(' + pointX(i, fh.records.length).toFixed(1) + ',' + pointY(r.price, fh.min, fh.max).toFixed(1) + ')'">
+                        <rect x="-16" y="-50" width="32" height="100" fill="transparent"/>
+                        <circle class="fc-dot"
+                                [class.fc-dot--latest]="last"
+                                [class.fc-dot--hovered]="hoveredPoint()?.pointIdx === i"
+                                r="3.5"/>
+                      </g>
+                    }
+                  </svg>
+
+                  <!-- Y-axis labels (overlaid on the left) -->
+                  <div class="fc-y-axis">
+                    <span>{{ fh.max.toFixed(2) }}</span>
+                    <span>{{ midPrice(fh).toFixed(2) }}</span>
+                    <span>{{ fh.min.toFixed(2) }}</span>
+                  </div>
+
+                  <!-- Tooltip -->
+                  @if (hoveredPoint(); as hp) {
+                    <div class="fc-tooltip"
+                         [style.left.%]="tooltipLeft(hp.pointIdx, fh.records.length)"
+                         [class.fc-tooltip--flip]="hp.pointIdx >= fh.records.length - 2">
+                      <span class="fc-tooltip-price">{{ hp.price.toFixed(3) }} €/L</span>
+                      <span class="fc-tooltip-date">{{ formatDate(hp.date) }}</span>
+                      <span class="fc-tooltip-arrow"></span>
+                    </div>
+                  }
+
+                  <!-- X-axis dates -->
+                  <div class="fc-x-axis">
+                    @for (r of fh.records; track r.recorded_at; let i = $index) {
+                      @if (shouldShowXLabel(i, fh.records.length)) {
+                        <span class="fc-x-label" [style.left.%]="tooltipLeft(i, fh.records.length)">
+                          {{ formatShortDate(r.recorded_at) }}
+                        </span>
+                      }
+                    }
+                  </div>
+                } @else {
+                  <div class="fc-single-point">
+                    <strong>{{ fh.latest.toFixed(3) }} €/L</strong>
+                    <span>Un seul relevé disponible — la courbe apparaîtra avec plus d'historique.</span>
+                  </div>
+                }
+              </div>
+
+            </div>
+          }
         }
 
       </div>
@@ -343,6 +382,54 @@ import { PriceHistoryService, FuelHistory } from '../../services/price-history.s
       animation: shimmer 1.5s infinite;
     }
     @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+    .sk-tabs { display: flex; gap: 8px; }
+
+    /* ── Fuel selector tabs ── */
+    .fc-tabs {
+      display: flex; gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin: -2px -2px 0;
+      padding-left: 2px; padding-right: 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .fc-tabs::-webkit-scrollbar { display: none; }
+    .fc-tab {
+      flex: 1 0 auto; min-width: 92px;
+      display: flex; flex-direction: column; gap: 5px;
+      padding: 9px 12px;
+      border: 1.5px solid var(--color-border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+      -webkit-tap-highlight-color: transparent;
+      text-align: left;
+    }
+    .fc-tab:hover { border-color: var(--color-border); }
+    .fc-tab:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .fc-tab--active {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+      box-shadow: var(--shadow-sm);
+    }
+    .fc-tab-name {
+      font-size: 12px; font-weight: 700; color: var(--color-text-secondary);
+      white-space: nowrap; letter-spacing: -0.2px;
+    }
+    .fc-tab--active .fc-tab-name { color: var(--color-primary-dark); }
+    .fc-tab-bottom { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .fc-tab-price {
+      font-size: 15px; font-weight: 900; color: var(--color-text-primary);
+      font-variant-numeric: tabular-nums; letter-spacing: -0.5px; line-height: 1;
+    }
+    .fc-tab-price small { font-size: 10px; font-weight: 700; color: var(--color-text-muted); margin-left: 1px; }
+    .fc-tab--active .fc-tab-price { color: var(--color-primary-dark); }
+    .fc-tab-trend { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .fc-tab-trend--up     { color: #dc2626; }
+    .fc-tab-trend--down   { color: var(--color-primary); }
+    .fc-tab-trend--stable { color: var(--color-text-muted); }
 
     /* ── States ── */
     .state-error {
@@ -418,10 +505,20 @@ import { PriceHistoryService, FuelHistory } from '../../services/price-history.s
     /* ── Chart ── */
     .fc-chart-wrap {
       position: relative;
-      height: 180px;
-      padding-bottom: 22px;
+      height: 248px;
+      padding: 8px 8px 22px;
       cursor: crosshair;
     }
+    .fc-single-point {
+      height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 6px;
+      text-align: center; padding: 0 24px; color: var(--color-text-muted);
+    }
+    .fc-single-point strong {
+      font-size: 24px; font-weight: 900; color: var(--color-primary-dark);
+      font-variant-numeric: tabular-nums; letter-spacing: -0.6px;
+    }
+    .fc-single-point span { font-size: var(--font-size-sm); line-height: 1.5; max-width: 280px; }
 
     .fc-svg {
       width: 100%; height: calc(100% - 22px);
@@ -513,6 +610,8 @@ import { PriceHistoryService, FuelHistory } from '../../services/price-history.s
 })
 export class PriceHistoryComponent implements OnInit {
   @Input({ required: true }) station!: Station;
+  /** Carburant à présélectionner (filtre actif). Si absent ou introuvable → 1ᵉʳ carburant. */
+  @Input() preferredFuel?: string | null;
   @Output() readonly close = new EventEmitter<void>();
 
   private readonly historyService = inject(PriceHistoryService);
@@ -521,7 +620,15 @@ export class PriceHistoryComponent implements OnInit {
   readonly loading       = signal(true);
   readonly error         = signal<string | null>(null);
   readonly fuelHistories = signal<FuelHistory[]>([]);
-  readonly hoveredPoint  = signal<{ fuelIdx: number; pointIdx: number; price: number; date: string } | null>(null);
+  readonly hoveredPoint  = signal<{ pointIdx: number; price: number; date: string } | null>(null);
+
+  /** Type de carburant actuellement affiché. */
+  readonly activeType = signal<string | null>(null);
+  /** Historique du carburant actif (fallback sur le premier disponible). */
+  readonly activeFuel = computed<FuelHistory | null>(() => {
+    const all = this.fuelHistories();
+    return all.find(f => f.type === this.activeType()) ?? all[0] ?? null;
+  });
 
   ngOnInit(): void {
     const fuelTypes = this.station.fuels.map(f => f.type);
@@ -531,6 +638,8 @@ export class PriceHistoryComponent implements OnInit {
       .subscribe({
         next: histories => {
           this.fuelHistories.set(histories);
+          const preferred = histories.find(h => h.type === this.preferredFuel);
+          this.activeType.set((preferred ?? histories[0])?.type ?? null);
           this.loading.set(false);
         },
         error: () => {
@@ -538,6 +647,26 @@ export class PriceHistoryComponent implements OnInit {
           this.loading.set(false);
         },
       });
+  }
+
+  selectFuel(type: string): void {
+    if (type === this.activeType()) return;
+    this.activeType.set(type);
+    this.hoveredPoint.set(null);
+  }
+
+  /** Navigation clavier entre onglets (flèches gauche/droite). */
+  onTabKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    const types = this.fuelHistories().map(h => h.type);
+    const current = types.indexOf(this.activeType() ?? '');
+    const next = event.key === 'ArrowRight'
+      ? (current + 1) % types.length
+      : (current - 1 + types.length) % types.length;
+    this.selectFuel(types[next]);
+    queueMicrotask(() =>
+      document.getElementById('fuel-tab-' + types[next])?.focus());
   }
 
   readonly W       = 300;
