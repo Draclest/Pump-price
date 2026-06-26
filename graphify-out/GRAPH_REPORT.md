@@ -1,12 +1,12 @@
 # Graph Report - prix à la pompe  (2026-06-26)
 
 ## Corpus Check
-- 56 files · ~31,676 words
+- 56 files · ~31,862 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 415 nodes · 545 edges · 51 communities detected
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 115 edges (avg confidence: 0.76)
+- 416 nodes · 547 edges · 51 communities detected
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 116 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -72,7 +72,7 @@
 7. `score_stations()` - 14 edges
 8. `RoutePanelComponent` - 11 edges
 9. `_base_env()` - 11 edges
-10. `_run_ingestion_inner()` - 9 edges
+10. `FiltersComponent` - 9 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `get_price_history endpoint` --calls--> `PriceHistoryComponent`  [INFERRED]
@@ -95,40 +95,40 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.08
-Nodes (40): get_brand_color(), get_logo_url(), Brand Logos =========== Maps normalized brand keys (from osm_enrichment._normali, ensure_index, STATION_MAPPING, fetch_all, fetch_by_ids, parse_records_to_stations (+32 more)
-
-### Community 1 - "Community 1"
 Cohesion: 0.1
 Nodes (37): _best_fuel(), _fraicheur_score(), haversine_km(), Scoring and recommendation service for fuel stations. Rates stations 0-100 combi, Return the great-circle distance in km between two points., Scoring rules for route mode:       price   60% — cheapest = 100, gap ≥ 1.00 €/L, Return 0.0-1.0 fraîcheur: 1.0 si < 1h, décroit linéairement jusqu'à 0 à 168h (7, Return 0.0-1.0 score based on available services. (+29 more)
 
-### Community 2 - "Community 2"
+### Community 1 - "Community 1"
 Cohesion: 0.07
 Nodes (4): AppComponent, AppStateService, GeolocationService, RoutingService
 
-### Community 3 - "Community 3"
+### Community 2 - "Community 2"
 Cohesion: 0.09
-Nodes (4): HISTORY_INDEX fuel-price-history, PriceHistoryComponent, PriceHistoryService, get_price_history endpoint
+Nodes (31): get_brand_color(), get_logo_url(), Brand Logos =========== Maps normalized brand keys (from osm_enrichment._normali, ensure_index, STATION_MAPPING, fetch_all, fetch_by_ids, parse_records_to_stations (+23 more)
 
-### Community 4 - "Community 4"
+### Community 3 - "Community 3"
 Cohesion: 0.09
 Nodes (26): Backend (Python/FastAPI), data_confidence_score, data.gouv.fr fuel price dataset, Decision Engine, Docker / docker-compose, Elasticsearch, .env configuration, Frontend (Angular/Leaflet) (+18 more)
 
-### Community 5 - "Community 5"
+### Community 4 - "Community 4"
 Cohesion: 0.15
 Nodes (18): BaseModel, GeocodingService, schedule_refresh, FuelPrice, GeoPoint, SearchParams, get_price_history(), get_station_by_id() (+10 more)
 
+### Community 5 - "Community 5"
+Cohesion: 0.12
+Nodes (3): HISTORY_INDEX fuel-price-history, PriceHistoryComponent, get_price_history endpoint
+
 ### Community 6 - "Community 6"
-Cohesion: 0.2
-Nodes (17): BaseSettings, Application settings — all values come from environment variables or .env file., Return CORS origins as a list., Settings, _base_env(), Tests for configuration validation.  Verifies that the application fails fast wi, Return a minimal valid env dict., test_cors_origins_empty_raises() (+9 more)
+Cohesion: 0.12
+Nodes (2): FiltersComponent, RoutePanelComponent
 
 ### Community 7 - "Community 7"
 Cohesion: 0.12
 Nodes (15): close_es(), get_es(), get_es_client, INDEX_NAME fuel-stations, fetch_live, _parse_live_records, get_ingestion_status endpoint, ingestion_state singleton (+7 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.13
-Nodes (2): FiltersComponent, RoutePanelComponent
+Cohesion: 0.2
+Nodes (17): BaseSettings, Application settings — all values come from environment variables or .env file., Return CORS origins as a list., Settings, _base_env(), Tests for configuration validation.  Verifies that the application fails fast wi, Return a minimal valid env dict., test_cors_origins_empty_raises() (+9 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.12
@@ -139,20 +139,20 @@ Cohesion: 0.18
 Nodes (1): MapComponent
 
 ### Community 11 - "Community 11"
+Cohesion: 0.17
+Nodes (18): build_spatial_index(), _cell(), cross_reference(), extract_osm_fields(), fetch_all_france(), fetch_by_osm_id(), _haversine_m(), nearest_osm() (+10 more)
+
+### Community 12 - "Community 12"
+Cohesion: 0.14
+Nodes (4): PriceHistoryService, haversineKm(), StationCacheService, StationService
+
+### Community 13 - "Community 13"
 Cohesion: 0.15
 Nodes (6): _make_station(), API endpoint tests.  These tests use ASGI transport (no real server) and mock El, Correct API key → ingestion is accepted (background task, status 200)., Return a minimal valid station dict., test_ingestion_trigger_correct_key_accepted(), test_search_returns_results()
 
-### Community 12 - "Community 12"
+### Community 14 - "Community 14"
 Cohesion: 0.23
 Nodes (11): filter_stations_near_route(), get_route(), _haversine_km(), _project_point_to_segment(), Routing service: fetches route geometry from OSRM and provides helpers to filter, Returns stations whose detour_km <= max_detour_km,     each enriched with _route, Returns:     {         "coordinates": [[lon, lat], ...],  # GeoJSON order, Projects point (px,py) onto segment (ax,ay)-(bx,by).     Returns (closest_x, clo (+3 more)
-
-### Community 13 - "Community 13"
-Cohesion: 0.22
-Nodes (3): haversineKm(), StationCacheService, StationService
-
-### Community 14 - "Community 14"
-Cohesion: 0.27
-Nodes (9): _expand_days(), is_open_now(), _parse_time(), Opening Hours Parser ==================== Parses the OSM `opening_hours` tag to, Return True if the station is currently open, False if closed,     None if the f, Mo-Fr' → [0,1,2,3,4]  |  'Sa' → [5]  |  'Mo,We,Fr' → [0,2,4], 06:00' → 360 (minutes since midnight), Parse one OSM rule like 'Mo-Fr 07:00-21:00' or 'Sa off'.     Returns True (open) (+1 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.29
@@ -301,7 +301,7 @@ Nodes (1): Run a full ingestion at startup if the index is empty or missing.    
 ## Knowledge Gaps
 - **87 isolated node(s):** `SortBarComponent`, `AddressSearchComponent`, `StationListComponent`, `brandInitial`, `Application settings — all values come from environment variables or .env file.` (+82 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 8`** (20 nodes): `FiltersComponent`, `.clearPrice()`, `.currentFuelNote()`, `.emit()`, `.isServiceSelected()`, `.onMaxPriceChange()`, `.selectFuel()`, `.toggleService()`, `filters.component.ts`, `route-panel.component.ts`, `RoutePanelComponent`, `.canSubmit()`, `.clear()`, `.constructor()`, `.ngOnChanges()`, `.onDestChange()`, `.onOriginChange()`, `.submit()`, `.swapFields()`, `._watchField()`
+- **Thin community `Community 6`** (22 nodes): `FiltersComponent`, `.clearPrice()`, `.currentFuelNote()`, `.emit()`, `.emitRadiusDebounced()`, `.isServiceSelected()`, `.onMaxPriceChange()`, `.selectFuel()`, `.toggleService()`, `filters.component.ts`, `route-panel.component.ts`, `RoutePanelComponent`, `.canSubmit()`, `.clear()`, `.constructor()`, `.ngOnChanges()`, `.onDestChange()`, `.onOriginChange()`, `.submit()`, `.swapFields()`, `._watchField()`, `.onCardClick()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 10`** (19 nodes): `map.component.ts`, `MapComponent`, `._applyHover()`, `._buildIcon()`, `._centerOnUser()`, `._createMarker()`, `._diffMarkers()`, `.formatDistance()`, `.formatFuelDate()`, `.hoveredStationId()`, `._initMap()`, `.isFuelHighlighted()`, `.ngAfterViewInit()`, `.ngOnChanges()`, `.ngOnDestroy()`, `.onPanelLogoError()`, `._refreshAllIcons()`, `._updateRoutePolyline()`, `._updateSelectionMarkers()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -377,11 +377,11 @@ Nodes (1): Run a full ingestion at startup if the index is empty or missing.    
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AppStateService` connect `Community 2` to `Community 5`, `Community 6`, `Community 8`, `Community 9`, `Community 12`?**
-  _High betweenness centrality (0.333) - this node is a cross-community bridge._
-- **Why does `Settings` connect `Community 6` to `Community 0`, `Community 2`, `Community 7`?**
+- **Why does `AppStateService` connect `Community 1` to `Community 4`, `Community 6`, `Community 8`, `Community 9`, `Community 14`?**
+  _High betweenness centrality (0.328) - this node is a cross-community bridge._
+- **Why does `Settings` connect `Community 8` to `Community 1`, `Community 2`, `Community 7`?**
   _High betweenness centrality (0.157) - this node is a cross-community bridge._
-- **Why does `StationCardComponent` connect `Community 9` to `Community 2`, `Community 3`?**
+- **Why does `StationCardComponent` connect `Community 9` to `Community 1`, `Community 5`, `Community 6`?**
   _High betweenness centrality (0.153) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `PriceHistoryComponent` (e.g. with `get_price_history endpoint` and `StationCardComponent`) actually correct?**
   _`PriceHistoryComponent` has 2 INFERRED edges - model-reasoned connections that need verification._

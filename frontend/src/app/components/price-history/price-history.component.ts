@@ -631,9 +631,7 @@ export class PriceHistoryComponent implements OnInit {
       .subscribe({
         next: histories => {
           this.fuelHistories.set(histories);
-          // Présélection : carburant filtré dans l'app si disponible, sinon « Tous ».
-          const preferred = histories.find(h => h.type === this.preferredFuel);
-          this.activeType.set(preferred?.type ?? 'all');
+          this.activeType.set(this._pickDefaultFuel(histories));
           this.loading.set(false);
         },
         error: () => {
@@ -647,6 +645,24 @@ export class PriceHistoryComponent implements OnInit {
     if (type === this.activeType()) return;
     this.activeType.set(type);
     this.hoveredPoint.set(null);
+  }
+
+  /**
+   * Carburant présélectionné = celui filtré dans l'app s'il a un historique.
+   * Le bouton « Sans-plomb » vaut 'E10', mais les données gouv distinguent
+   * E10 et SP95 : on accepte donc l'un OU l'autre. Repli : carburant matché
+   * de la station, puis « Tous ».
+   */
+  private _pickDefaultFuel(histories: FuelHistory[]): string {
+    const pref = this.preferredFuel;
+    if (pref) {
+      const group = pref === 'E10' ? ['E10', 'SP95'] : [pref];
+      const match = histories.find(h => group.includes(h.type));
+      if (match) return match.type;
+    }
+    const matched = this.station.matched_fuel?.type;
+    if (matched && histories.some(h => h.type === matched)) return matched;
+    return 'all';
   }
 
   readonly W       = 300;

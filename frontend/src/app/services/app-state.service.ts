@@ -129,7 +129,6 @@ export class AppStateService {
     this.loading.set(true);
     this.error.set(null);
     this.hasSearched.set(true);
-    this.filtersExpanded.set(false);
 
     const f = this.filters();
     this.stationService.recommendStations({
@@ -155,6 +154,23 @@ export class AppStateService {
 
   onFiltersChanged(f: FilterValues): void {
     this.filters.set(f);
+
+    // Mode itinéraire : si un trajet est déjà calculé, on recalcule la meilleure
+    // station avec les nouveaux filtres (ex. changement de type de carburant).
+    if (this.mode() === 'route') {
+      const o = this.routeOrigin();
+      const d = this.routeDest();
+      if (o && d) {
+        this.onRouteRequested({
+          origin: o.label, originLat: o.lat, originLon: o.lon,
+          destination: d.label, destLat: d.lat, destLon: d.lon,
+          maxDetourKm: this.routeMaxDetour(),
+        });
+      }
+      return;
+    }
+
+    // Mode proximité : on relance la recherche autour de la position courante.
     const loc = this.userLocation();
     if (loc) this.fetchStations(loc.lat, loc.lon);
   }
@@ -174,7 +190,6 @@ export class AppStateService {
     this.routeError.set(null);
     this.routeData.set(null);
     this.hasRouteSearched.set(true);
-    this.filtersExpanded.set(false);
     this.routeOrigin.set({ lat: req.originLat, lon: req.originLon, label: req.origin });
     this.routeDest.set({ lat: req.destLat, lon: req.destLon, label: req.destination });
 

@@ -29,7 +29,7 @@ export class IngestionStatusService implements OnDestroy {
 
   /** True while data is being fetched for the first time. */
   readonly isLoading = computed(() =>
-    this._state().status === 'running' || this._state().status === 'idle'
+    this._state().status === 'running'
   );
 
   readonly state = this._state.asReadonly();

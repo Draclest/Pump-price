@@ -58,7 +58,7 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
         <div class="slider-wrap">
           <input id="radius-input" type="range" class="slider"
                  min="1" max="50" step="1"
-                 [(ngModel)]="values.radiusKm" (ngModelChange)="emit()"
+                 [(ngModel)]="values.radiusKm" (ngModelChange)="emitRadiusDebounced()"
                  [attr.aria-valuemin]="1" [attr.aria-valuemax]="50"
                  [attr.aria-valuenow]="values.radiusKm"
                  [attr.aria-valuetext]="values.radiusKm + ' kilomètres'" />
@@ -318,7 +318,16 @@ export class FiltersComponent {
     this.emit();
   }
 
+  /** Le curseur de rayon émet en continu pendant le glissement : on temporise
+   *  pour ne relancer la recherche qu'une fois l'utilisateur stabilisé (~400ms). */
+  private radiusTimer: ReturnType<typeof setTimeout> | null = null;
+  emitRadiusDebounced(): void {
+    if (this.radiusTimer) clearTimeout(this.radiusTimer);
+    this.radiusTimer = setTimeout(() => this.emit(), 400);
+  }
+
   emit(): void {
+    if (this.radiusTimer) { clearTimeout(this.radiusTimer); this.radiusTimer = null; }
     this.changed.emit({ ...this.values });
   }
 }
