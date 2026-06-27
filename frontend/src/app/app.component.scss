@@ -43,10 +43,8 @@
 
 .brand-logo {
   width: 34px; height: 34px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   border-radius: var(--radius-md);
-  display: flex; align-items: center; justify-content: center;
-  color: #fff;
+  display: block; object-fit: cover;
   box-shadow: 0 2px 8px rgba(22,163,74,0.30);
 }
 .brand-title {
@@ -128,6 +126,22 @@
 /* ── Map area (full-bleed hero, behind the floating panel) ─────────────────── */
 .map-area { position: absolute; inset: 0; z-index: 1; }
 
+/* Desktop map-first : bouton « me localiser » flottant en bas-droite (Maps-like). */
+.map-fab {
+  display: flex; align-items: center; justify-content: center;
+  position: absolute; right: 24px; bottom: 24px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-primary); cursor: pointer; z-index: 15;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast);
+}
+.map-fab:hover { box-shadow: var(--shadow-xl); color: var(--color-primary-dark); }
+.map-fab:not(:disabled):active { transform: scale(0.92); }
+.map-fab:disabled { color: var(--color-text-muted); cursor: not-allowed; }
+
 .fab-list {
   display: none;
   position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -193,7 +207,6 @@
 
 /* ── Mobile-only elements hidden on desktop ─────────────────────────────── */
 .sheet           { display: none; }
-.map-fab         { display: none; }
 .filters-overlay { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════════════════

@@ -45,7 +45,7 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
 
         <div class="sidebar-header">
           <div class="sidebar-brand">
-            <div class="brand-logo"><app-icon name="pump" [size]="16" [strokeWidth]="2.2" /></div>
+            <img class="brand-logo" src="assets/icon-maskable.svg" alt="pump-price" width="34" height="34" />
             <h1 class="brand-title">Pump Price</h1>
           </div>
 
