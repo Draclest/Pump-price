@@ -88,6 +88,25 @@ def test_habitual_orchestration(patched):
     assert s1["breakdown"] == {"pump_saving_eur": 3.36, "detour_fuel_eur": 0.24, "time_cost_eur": 0.83}
 
 
+def test_nearby_ignores_detour_hard_filter(patched):
+    """En nearby, le rayon borne la portée : pas de filtre dur de détour.
+
+    S2 (détour 12 min > max_detour_min 10) DOIT rester présent — contrairement à
+    habitual/route. Le coût carburant du détour le pénalise déjà dans le gain net.
+    """
+    vehicle = Vehicle(fuel="gazole", consumption_l_100km=5.6, tank_capacity_l=50)
+    prefs = Preferences(max_detour_min=10, max_price_age_h=72)
+
+    out = _run(svc.search_net_gain(
+        es=object(), mode="nearby", vehicle=vehicle, prefs=prefs,
+        origin=ORIGIN, destination=None, baseline_station_id=None,
+    ))
+
+    ids = [r["station_id"] for r in out["results"]]
+    assert "S2" in ids                         # plus exclu par le détour
+    assert set(ids) == {"S1", "S2", "S3"}
+
+
 def test_empty_when_no_candidates(monkeypatch):
     async def empty(*a, **k):
         return []

@@ -118,7 +118,12 @@ async def search_net_gain(
             if det is None:
                 continue
             detour_km, detour_min = det
-            if detour_min > prefs.max_detour_min:   # filtre dur
+            # Filtre dur de détour : pertinent pour route (détour d'insertion sur
+            # le trajet) et habitual. En nearby, c'est le RAYON choisi qui borne la
+            # portée — un plafond de temps fixe exclurait tout dès que le rayon
+            # dépasse quelques km. Le coût carburant du détour pénalise déjà la
+            # distance dans le gain net.
+            if mode != "nearby" and detour_min > prefs.max_detour_min:
                 continue
             conf = confidence_from_age(cand.price_age_min)
             if _confidence_excluded(conf, prefs.max_price_age_h, cand.price_age_min):
