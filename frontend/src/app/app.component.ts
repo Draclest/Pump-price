@@ -104,17 +104,20 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
           <app-sort-bar />
         }
 
-        <div class="sidebar-filters">
-          <button class="filters-toggle" type="button" [attr.aria-expanded]="state.filtersExpanded()"
-                  (click)="state.filtersExpanded.set(!state.filtersExpanded())">
-            <span class="filters-toggle-label"><app-icon name="filter" [size]="12" [strokeWidth]="2.2" /> Filtres</span>
-            <app-icon class="filters-chevron" [class.filters-chevron--open]="state.filtersExpanded()"
-                      name="chevron-down" [size]="13" [strokeWidth]="2.5" />
-          </button>
-          <div class="filters-body" [class.filters-body--open]="state.filtersExpanded()">
-            <app-filters [values]="state.filters()" (changed)="state.onFiltersChanged($event)"></app-filters>
+        @if (filtersMode() !== 'hidden') {
+          <div class="sidebar-filters">
+            <button class="filters-toggle" type="button" [attr.aria-expanded]="state.filtersExpanded()"
+                    (click)="state.filtersExpanded.set(!state.filtersExpanded())">
+              <span class="filters-toggle-label"><app-icon name="filter" [size]="12" [strokeWidth]="2.2" /> Filtres</span>
+              <app-icon class="filters-chevron" [class.filters-chevron--open]="state.filtersExpanded()"
+                        name="chevron-down" [size]="13" [strokeWidth]="2.5" />
+            </button>
+            <div class="filters-body" [class.filters-body--open]="state.filtersExpanded()">
+              <app-filters [values]="state.filters()" [reduced]="filtersMode() === 'nearby' ? 'nearby' : 'none'"
+                           (changed)="state.onFiltersChanged($event)"></app-filters>
+            </div>
           </div>
-        </div>
+        }
 
         <!-- Nearby results -->
         @if (state.mode() === 'nearby') {
@@ -282,11 +285,13 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
                   (click)="vehicleOpen.set(true)" aria-label="Mon véhicule">
             <app-icon name="car" [size]="12" [strokeWidth]="2.2" /> Véhicule
           </button>
-          <button class="filters-pill-btn" type="button"
-                  [class.filters-pill-btn--on]="state.filters().fuelType !== 'Tous'"
-                  (click)="filtersOpen.set(true)" aria-label="Filtres">
-            <app-icon name="filter" [size]="12" [strokeWidth]="2.2" /> Filtres
-          </button>
+          @if (filtersMode() !== 'hidden') {
+            <button class="filters-pill-btn" type="button"
+                    [class.filters-pill-btn--on]="state.filters().fuelType !== 'Tous'"
+                    (click)="filtersOpen.set(true)" aria-label="Filtres">
+              <app-icon name="filter" [size]="12" [strokeWidth]="2.2" /> Filtres
+            </button>
+          }
         </div>
       }
 
@@ -383,7 +388,8 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
             </div>
           </div>
           <div class="filters-modal-body">
-            <app-filters [values]="state.filters()" (changed)="onMobileFilters($event)"></app-filters>
+            <app-filters [values]="state.filters()" [reduced]="filtersMode() === 'nearby' ? 'nearby' : 'none'"
+                         (changed)="onMobileFilters($event)"></app-filters>
           </div>
         </div>
       </div>
@@ -412,6 +418,13 @@ export class AppComponent implements OnInit {
   readonly sheetSnap   = signal<Snap>(0);
   readonly filtersOpen = signal(false);
   readonly vehicleOpen = signal(false);
+
+  /** Filtres : 'none' (score, tous) · 'nearby' (gain net proximité → rayon seul) ·
+   *  'hidden' (gain net itinéraire → détour piloté par le panneau itinéraire). */
+  readonly filtersMode = computed<'none' | 'nearby' | 'hidden'>(() => {
+    if (!this.state.vehicle.hasProfile()) return 'none';
+    return this.state.mode() === 'route' ? 'hidden' : 'nearby';
+  });
 
   readonly hasResults = computed(() =>
     this.state.mode() === 'route'

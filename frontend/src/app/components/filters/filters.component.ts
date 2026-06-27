@@ -31,6 +31,7 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
   template: `
     <div class="filters-body" role="group" aria-label="Filtres de recherche">
 
+      @if (reduced === 'none') {
       <!-- Fuel type -->
       <div class="filter-section">
         <label class="section-label">Type de carburant</label>
@@ -48,6 +49,7 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
           <p class="fuel-note">{{ currentFuelNote }}</p>
         }
       </div>
+      }
 
       <!-- Radius -->
       <div class="filter-section">
@@ -69,6 +71,7 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
         </div>
       </div>
 
+      @if (reduced === 'none') {
       <!-- Max price -->
       <div class="filter-section">
         <label class="section-label" for="price-input">Prix maximum (€/L)</label>
@@ -109,6 +112,7 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
           }
         </div>
       </div>
+      }
 
     </div>
   `,
@@ -280,6 +284,8 @@ const SERVICE_OPTIONS: { label: string; value: string }[] = [
 })
 export class FiltersComponent {
   @Input() values: FilterValues = { fuelType: 'E10', radiusKm: 10, maxPrice: null, services: [] };
+  /** 'nearby' (gain net proximité) → seul le rayon est affiché ; 'none' → tous les filtres. */
+  @Input() reduced: 'none' | 'nearby' = 'none';
   @Output() readonly changed = new EventEmitter<FilterValues>();
 
   readonly allFuelOptions: FuelTypeOrAll[] = ['Tous', ...FUEL_TYPES];

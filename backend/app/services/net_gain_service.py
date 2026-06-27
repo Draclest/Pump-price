@@ -91,6 +91,7 @@ async def search_net_gain(
     origin: Optional[tuple[float, float]],
     destination: Optional[tuple[float, float]],
     baseline_station_id: Optional[str],
+    radius_km: Optional[float] = None,
 ) -> dict:
     """Retourne le payload {baseline, fill_liters, results} (cf. spec §8)."""
     fill_liters = resolve_fill_liters(vehicle, prefs)
@@ -99,7 +100,7 @@ async def search_net_gain(
     # ── Étage 1 : préfiltre ES + baseline ────────────────────────────────────
     with _span("es.prefilter"):
         candidates, baseline, route = await _prefilter_and_baseline(
-            es, mode, vehicle.fuel, prefs, origin, destination, baseline_station_id
+            es, mode, vehicle.fuel, prefs, origin, destination, baseline_station_id, radius_km
         )
 
     if baseline is None or not candidates:
@@ -204,9 +205,10 @@ async def search_net_gain(
 
 async def _prefilter_and_baseline(
     es, mode, fuel: Fuel, prefs: Preferences,
-    origin, destination, baseline_station_id,
+    origin, destination, baseline_station_id, radius_km=None,
 ) -> tuple[list[Candidate], Optional[Baseline], Optional[dict]]:
     route = None
+    nearby_radius = radius_km or NEARBY_RADIUS_KM
 
     if mode == "route":
         from app.services import routing_service
@@ -221,9 +223,9 @@ async def _prefilter_and_baseline(
         baseline = Baseline(price=med, source="route_destination") if med is not None else None
         return candidates, baseline, route
 
-    # nearby / habitual : préfiltre autour de l'origine
+    # nearby / habitual : préfiltre autour de l'origine (rayon UI si fourni)
     candidates = await repo.prefilter_radius(
-        es, origin[0], origin[1], NEARBY_RADIUS_KM, fuel, prefs.max_price_age_h, K_CANDIDATES
+        es, origin[0], origin[1], nearby_radius, fuel, prefs.max_price_age_h, K_CANDIDATES
     )
 
     if mode == "habitual":

@@ -57,6 +57,7 @@ class NetGainRequest(BaseModel):
     origin: Optional[GeoPointIn] = None
     destination: Optional[GeoPointIn] = None
     baseline_station_id: Optional[str] = None
+    radius_km: Optional[float] = Field(default=None, gt=0, le=100)
     vehicle: VehicleIn
     preferences: PreferencesIn = Field(default_factory=PreferencesIn)
 
@@ -102,6 +103,7 @@ async def search(
             origin=origin,
             destination=destination,
             baseline_station_id=req.baseline_station_id,
+            radius_km=req.radius_km,
         )
     except HTTPException:
         raise

@@ -138,7 +138,7 @@ export class AppStateService {
     // net-gain, repli silencieux sur le score (robustesse cold-start).
     const vp = this.vehicle.profile();
     if (vp) {
-      this.netGain.search('nearby', vp, { lat, lon }, null).subscribe({
+      this.netGain.search('nearby', vp, { lat, lon }, null, { radiusKm: this.filters().radiusKm }).subscribe({
         next: res => {
           this._allStations.set(res.results);
           this.loading.set(false);
@@ -241,6 +241,7 @@ export class AppStateService {
         'route', vp,
         { lat: req.originLat, lon: req.originLon },
         { lat: req.destLat, lon: req.destLon },
+        { maxDetourMin: req.maxDetourKm * 1.5 },  // ~40 km/h : km → min
       ).subscribe({
         next: res => {
           if (res.route) {

@@ -29,6 +29,7 @@ export interface NetGainResponse {
 }
 
 export interface NetGainOptions {
+  radiusKm?: number;
   maxDetourMin?: number;
   maxPriceAgeH?: number;
   timeValueEurH?: number;
@@ -51,6 +52,7 @@ export class NetGainService {
       mode,
       origin,
       destination: destination ?? undefined,
+      radius_km: opts.radiusKm,
       vehicle: {
         fuel: vehicle.fuel,
         consumption_l_100km: vehicle.consumptionL100km,
