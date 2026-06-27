@@ -121,7 +121,6 @@ import { safeBrandColor } from '../../utils/brand.utils';
               <div class="ng-break">
                 <span>Économie pompe <b>{{ signedEur(bd.pump_saving_eur) }}</b></span>
                 <span>− Carburant détour <b>{{ bd.detour_fuel_eur.toFixed(2) }}&nbsp;€</b></span>
-                <span>− Temps <b>{{ bd.time_cost_eur.toFixed(2) }}&nbsp;€</b></span>
               </div>
             }
           </div>

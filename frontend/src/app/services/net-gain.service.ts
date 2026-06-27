@@ -62,7 +62,7 @@ export class NetGainService {
       preferences: {
         max_detour_min: opts.maxDetourMin ?? 10,
         max_price_age_h: opts.maxPriceAgeH ?? 72,
-        time_value_eur_h: opts.timeValueEurH ?? 10,
+        time_value_eur_h: opts.timeValueEurH ?? 0,
       },
     };
     return this.http.post<NetGainResponse>(this.url, body);

@@ -36,7 +36,7 @@ class Vehicle:
 
 @dataclass(frozen=True)
 class Preferences:
-    time_value_eur_h: float = 10.0          # 0 = mode puriste (prix pur)
+    time_value_eur_h: float = 0.0           # 0 = on ignore le temps, seul le carburant compte
     max_detour_min: float = 10.0            # filtre dur (appliqué dans le service)
     max_price_age_h: float = 72.0
     fill_target_l: Optional[float] = None   # None => plein complet calculé
