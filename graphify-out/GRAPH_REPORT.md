@@ -1,12 +1,12 @@
 # Graph Report - prix à la pompe  (2026-06-27)
 
 ## Corpus Check
-- 67 files · ~41,225 words
+- 67 files · ~41,831 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 527 nodes · 793 edges · 57 communities detected
-- Extraction: 72% EXTRACTED · 28% INFERRED · 0% AMBIGUOUS · INFERRED: 224 edges (avg confidence: 0.71)
+- 535 nodes · 813 edges · 57 communities detected
+- Extraction: 71% EXTRACTED · 29% INFERRED · 0% AMBIGUOUS · INFERRED: 236 edges (avg confidence: 0.71)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -69,16 +69,16 @@
 - [[_COMMUNITY_Community 70|Community 70]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Vehicle` - 23 edges
-2. `Preferences` - 23 edges
-3. `PriceHistoryComponent` - 22 edges
-4. `MapComponent` - 21 edges
+1. `Vehicle` - 25 edges
+2. `Preferences` - 25 edges
+3. `MapComponent` - 23 edges
+4. `PriceHistoryComponent` - 22 edges
 5. `AppStateService` - 21 edges
 6. `StationCardComponent` - 19 edges
 7. `Settings` - 19 edges
 8. `AppComponent` - 16 edges
-9. `search_net_gain()` - 15 edges
-10. `score_stations()` - 14 edges
+9. `Candidate` - 16 edges
+10. `NetGainInput` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `PriceHistoryComponent` --calls--> `get_price_history endpoint`  [INFERRED]
@@ -102,27 +102,27 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.09
-Nodes (47): compute_net_gain(), confidence_from_age(), GeoPointIn, NetGainBreakdown, NetGainInput, NetGainRequest, NetGainResult, Preferences (+39 more)
+Nodes (50): compute_net_gain(), confidence_from_age(), GeoPointIn, NetGainBreakdown, NetGainInput, NetGainRequest, NetGainResult, Preferences (+42 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.06
-Nodes (5): AppComponent, AppStateService, GeolocationService, RoutingService, VehicleProfileService
+Cohesion: 0.07
+Nodes (4): AppComponent, AppStateService, GeolocationService, RoutingService
 
 ### Community 2 - "Community 2"
 Cohesion: 0.1
 Nodes (37): _best_fuel(), _fraicheur_score(), haversine_km(), Scoring and recommendation service for fuel stations. Rates stations 0-100 combi, Return the great-circle distance in km between two points., Scoring rules for route mode:       price   60% — cheapest = 100, gap ≥ 1.00 €/L, Return 0.0-1.0 fraîcheur: 1.0 si < 1h, décroit linéairement jusqu'à 0 à 168h (7, Return 0.0-1.0 score based on available services. (+29 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.09
-Nodes (30): get_brand_color(), get_logo_url(), Brand Logos =========== Maps normalized brand keys (from osm_enrichment._normali, ensure_index, STATION_MAPPING, fetch_all, fetch_by_ids, parse_records_to_stations (+22 more)
+Cohesion: 0.08
+Nodes (4): FiltersComponent, RoutePanelComponent, VehicleProfileComponent, VehicleProfileService
 
 ### Community 4 - "Community 4"
-Cohesion: 0.11
-Nodes (25): _compute_detours(), _confidence_excluded(), _detour_fallback_radius(), _detour_fallback_route(), _km_to_bbox(), _km_to_min(), _median_price(), _prefilter_and_baseline() (+17 more)
+Cohesion: 0.09
+Nodes (31): get_brand_color(), get_logo_url(), Brand Logos =========== Maps normalized brand keys (from osm_enrichment._normali, ensure_index, STATION_MAPPING, fetch_all, fetch_by_ids, parse_records_to_stations (+23 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.09
-Nodes (3): FiltersComponent, RoutePanelComponent, VehicleProfileComponent
+Cohesion: 0.1
+Nodes (25): _compute_detours(), _confidence_excluded(), _detour_fallback_radius(), _detour_fallback_route(), _km_to_bbox(), _km_to_min(), _median_price(), _prefilter_and_baseline() (+17 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.09
@@ -137,28 +137,28 @@ Cohesion: 0.12
 Nodes (3): HISTORY_INDEX fuel-price-history, PriceHistoryComponent, get_price_history endpoint
 
 ### Community 9 - "Community 9"
-Cohesion: 0.11
-Nodes (16): close_es(), get_es(), get_es_client, INDEX_NAME fuel-stations, fetch_live, _parse_live_records, get_ingestion_status endpoint, run_ingestion() (+8 more)
+Cohesion: 0.16
+Nodes (1): MapComponent
 
 ### Community 10 - "Community 10"
+Cohesion: 0.12
+Nodes (15): close_es(), get_es(), get_es_client, INDEX_NAME fuel-stations, fetch_live, _parse_live_records, get_ingestion_status endpoint, ingestion_state singleton (+7 more)
+
+### Community 11 - "Community 11"
 Cohesion: 0.2
 Nodes (17): BaseSettings, Application settings — all values come from environment variables or .env file., Return CORS origins as a list., Settings, _base_env(), Tests for configuration validation.  Verifies that the application fails fast wi, Return a minimal valid env dict., test_cors_origins_empty_raises() (+9 more)
 
-### Community 11 - "Community 11"
-Cohesion: 0.17
-Nodes (15): GeocodingService, _age_minutes(), es_types_for(), _nested_fuel_query(), prefilter_bbox(), prefilter_radius(), Repository ES du moteur de gain net — étage 1 (préfiltre).  Réutilise l'index ex, Préfiltre géo (rayon) — modes nearby / habitual. (+7 more)
-
 ### Community 12 - "Community 12"
-Cohesion: 0.18
-Nodes (1): MapComponent
-
-### Community 13 - "Community 13"
 Cohesion: 0.17
 Nodes (18): build_spatial_index(), _cell(), cross_reference(), extract_osm_fields(), fetch_all_france(), fetch_by_osm_id(), _haversine_m(), nearest_osm() (+10 more)
 
+### Community 13 - "Community 13"
+Cohesion: 0.19
+Nodes (14): GeocodingService, _age_minutes(), es_types_for(), _nested_fuel_query(), prefilter_bbox(), prefilter_radius(), Repository ES du moteur de gain net — étage 1 (préfiltre).  Réutilise l'index ex, Préfiltre géo (rayon) — modes nearby / habitual. (+6 more)
+
 ### Community 14 - "Community 14"
-Cohesion: 0.22
-Nodes (16): BaseModel, schedule_refresh, FuelPrice, GeoPoint, SearchParams, get_station_by_id(), Map an ES _source dict to StationSearchResult, recomputing is_open live., _to_result() (+8 more)
+Cohesion: 0.21
+Nodes (16): BaseModel, schedule_refresh, FuelPrice, GeoPoint, SearchParams, get_station_by_id(), Map an ES _source dict to StationSearchResult, recomputing is_open live., search_stations() (+8 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.14
@@ -331,7 +331,7 @@ Nodes (1): Run a full ingestion at startup if the index is empty or missing.    
 ## Knowledge Gaps
 - **103 isolated node(s):** `SortBarComponent`, `AddressSearchComponent`, `StationListComponent`, `brandInitial`, `Application settings — all values come from environment variables or .env file.` (+98 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 12`** (19 nodes): `map.component.ts`, `MapComponent`, `._applyHover()`, `._buildIcon()`, `._centerOnUser()`, `._createMarker()`, `._diffMarkers()`, `.formatDistance()`, `.formatFuelDate()`, `.hoveredStationId()`, `._initMap()`, `.isFuelHighlighted()`, `.ngAfterViewInit()`, `.ngOnChanges()`, `.ngOnDestroy()`, `.onPanelLogoError()`, `._refreshAllIcons()`, `._updateRoutePolyline()`, `._updateSelectionMarkers()`
+- **Thin community `Community 9`** (21 nodes): `map.component.ts`, `MapComponent`, `._applyHover()`, `._buildIcon()`, `._centerOnUser()`, `._createMarker()`, `._diffMarkers()`, `.formatDistance()`, `.formatFuelDate()`, `.hoveredStationId()`, `._initMap()`, `.isFuelHighlighted()`, `.ngAfterViewInit()`, `.ngOnChanges()`, `.ngOnDestroy()`, `.onPanelLogoError()`, `._refreshAllIcons()`, `.signedEur()`, `._updateRoutePolyline()`, `._updateSelectionMarkers()`, `.verdictLabel()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 18`** (7 nodes): `icon.component.ts`, `IconComponent`, `._build()`, `.constructor()`, `.name()`, `.size()`, `.strokeWidth()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -413,16 +413,16 @@ Nodes (1): Run a full ingestion at startup if the index is empty or missing.    
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AppStateService` connect `Community 1` to `Community 10`, `Community 5`, `Community 14`, `Community 7`?**
-  _High betweenness centrality (0.304) - this node is a cross-community bridge._
-- **Why does `StationCardComponent` connect `Community 7` to `Community 8`, `Community 1`, `Community 5`?**
-  _High betweenness centrality (0.142) - this node is a cross-community bridge._
-- **Why does `search()` connect `Community 11` to `Community 0`, `Community 1`, `Community 4`?**
-  _High betweenness centrality (0.130) - this node is a cross-community bridge._
-- **Are the 22 inferred relationships involving `Vehicle` (e.g. with `GeoPointIn` and `VehicleIn`) actually correct?**
-  _`Vehicle` has 22 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 22 inferred relationships involving `Preferences` (e.g. with `GeoPointIn` and `VehicleIn`) actually correct?**
-  _`Preferences` has 22 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `AppStateService` connect `Community 1` to `Community 3`, `Community 5`, `Community 7`, `Community 11`, `Community 14`?**
+  _High betweenness centrality (0.302) - this node is a cross-community bridge._
+- **Why does `StationCardComponent` connect `Community 7` to `Community 8`, `Community 1`, `Community 3`?**
+  _High betweenness centrality (0.141) - this node is a cross-community bridge._
+- **Why does `search()` connect `Community 13` to `Community 0`, `Community 1`, `Community 14`?**
+  _High betweenness centrality (0.132) - this node is a cross-community bridge._
+- **Are the 24 inferred relationships involving `Vehicle` (e.g. with `GeoPointIn` and `VehicleIn`) actually correct?**
+  _`Vehicle` has 24 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 24 inferred relationships involving `Preferences` (e.g. with `GeoPointIn` and `VehicleIn`) actually correct?**
+  _`Preferences` has 24 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 2 inferred relationships involving `PriceHistoryComponent` (e.g. with `get_price_history endpoint` and `StationCardComponent`) actually correct?**
   _`PriceHistoryComponent` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 5 inferred relationships involving `AppStateService` (e.g. with `RoutePanelComponent` and `StationCardComponent`) actually correct?**
