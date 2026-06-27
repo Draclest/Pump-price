@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, computed, inject } from '@angular/core';
 import { AppStateService } from '../../services/app-state.service';
 import { SortBy } from '../../models/station.model';
 
@@ -8,6 +8,8 @@ const SORT_OPTIONS: { value: SortBy; label: string; icon: string }[] = [
   { value: 'distance',  label: 'Distance', icon: '📍' },
   { value: 'freshness', label: 'Récent',   icon: '🕐' },
 ];
+const NETGAIN_OPTION: { value: SortBy; label: string; icon: string } =
+  { value: 'netgain', label: 'Gain net', icon: '⚡' };
 
 /**
  * Sort chips bound to AppStateService.sortBy.
@@ -19,7 +21,7 @@ const SORT_OPTIONS: { value: SortBy; label: string; icon: string }[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="sort-bar" [class.sort-bar--sheet]="variant === 'sheet'" role="group" aria-label="Trier par">
-      @for (opt of options; track opt.value) {
+      @for (opt of options(); track opt.value) {
         <button class="sort-btn" type="button"
                 [class.sort-btn--active]="state.sortBy() === opt.value"
                 (click)="state.sortBy.set(opt.value)">
@@ -57,7 +59,9 @@ const SORT_OPTIONS: { value: SortBy; label: string; icon: string }[] = [
 })
 export class SortBarComponent {
   readonly state = inject(AppStateService);
-  readonly options = SORT_OPTIONS;
+  readonly options = computed(() =>
+    this.state.vehicle.hasProfile() ? [NETGAIN_OPTION, ...SORT_OPTIONS] : SORT_OPTIONS
+  );
 
   @Input() variant: 'default' | 'sheet' = 'default';
 }

@@ -68,6 +68,13 @@
 }
 .btn-icon--primary:hover { box-shadow: 0 4px 14px rgba(22,163,74,0.40); }
 .btn-icon--primary:disabled { background: var(--color-text-tertiary); border-color: transparent; box-shadow: none; cursor: not-allowed; }
+.btn-icon { position: relative; }
+.btn-icon--on { background: var(--color-primary-light); border-color: var(--color-primary); color: var(--color-primary); }
+.estim-dot {
+  position: absolute; top: -2px; right: -2px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--color-accent); border: 2px solid var(--color-surface);
+}
 
 .https-badge {
   display: flex; align-items: center; gap: 5px;

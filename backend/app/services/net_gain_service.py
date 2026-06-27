@@ -189,6 +189,13 @@ async def search_net_gain(
             "source": baseline.source,
         },
         "fill_liters": round(fill_liters, 1),
+        # Géométrie du tracé (mode route) pour que le front affiche la polyline
+        # sans second appel.
+        "route": {
+            "coordinates": route["coordinates"],
+            "distance_m": route.get("distance_m"),
+            "duration_s": route.get("duration_s"),
+        } if route else None,
         "results": results[:N_RESULTS],
     }
 

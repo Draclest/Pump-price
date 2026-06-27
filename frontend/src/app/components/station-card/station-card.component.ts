@@ -77,9 +77,19 @@ interface ScoreRow {
           </div>
         </div>
 
-        <!-- Prix hero + score -->
+        <!-- Prix hero + gain net / score -->
         <div class="card-right">
-          @if (station.score != null) {
+          @if (station.net_gain_eur != null) {
+            <div class="ng-badge"
+                 [class.ng-badge--worth]="station.verdict === 'worth_it'"
+                 [class.ng-badge--neutral]="station.verdict === 'neutral'"
+                 [class.ng-badge--skip]="station.verdict === 'skip'"
+                 [attr.aria-label]="ngAria()">
+              <span class="ng-glyph" aria-hidden="true">{{ ngGlyph() }}</span>
+              <span class="ng-amount">{{ signedEur(station.net_gain_eur) }}</span>
+              <span class="ng-sub">gain net</span>
+            </div>
+          } @else if (station.score != null) {
             <div class="score-wrap">
               <button class="score-badge"
                       [class.score-badge--high]="station.score >= 70"
@@ -268,6 +278,19 @@ interface ScoreRow {
     .price-dir { font-size: 11px; line-height: 1; font-weight: 700; align-self: center; }
     .price-dir--good { color: var(--color-price-good); }
     .price-dir--high { color: var(--color-price-high); }
+
+    /* ── Badge gain net (verdict + montant signé + glyphe) ── */
+    .ng-badge {
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      min-width: 66px; padding: 6px 8px; border-radius: var(--radius-md);
+      font-variant-numeric: tabular-nums; text-align: center;
+    }
+    .ng-badge--worth   { background: var(--color-price-good-bg); color: var(--color-price-good); }
+    .ng-badge--neutral { background: var(--color-price-mid-bg);  color: var(--color-price-mid); }
+    .ng-badge--skip    { background: var(--color-price-high-bg); color: var(--color-price-high); }
+    .ng-glyph  { font-size: 11px; line-height: 1; font-weight: 800; }
+    .ng-amount { font-size: 15px; font-weight: 900; letter-spacing: -0.4px; line-height: 1.1; }
+    .ng-sub    { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
     .price-tag { font-size: 10px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
 
     /* ── Score badge ── */
@@ -428,6 +451,22 @@ export class StationCardComponent {
 
   highlightPrice(): number | null {
     return this.station.fuels.find(f => f.type === this.highlightFuel)?.price ?? null;
+  }
+
+  /** Gain net signé en € (règle daltonisme : valeur + signe, pas la teinte seule). */
+  signedEur(v: number): string {
+    return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + ' €';
+  }
+  /** Glyphe directionnel du verdict (▲ ça vaut le coup / ▼ n'y va pas / – neutre). */
+  ngGlyph(): string {
+    const vd = this.station.verdict;
+    return vd === 'worth_it' ? '▲' : vd === 'skip' ? '▼' : '–';
+  }
+  ngAria(): string {
+    const v = this.station.net_gain_eur ?? 0;
+    const vd = this.station.verdict;
+    const verb = vd === 'worth_it' ? 'vous gagnez' : vd === 'skip' ? 'vous perdez' : 'gain neutre de';
+    return `Gain net : ${verb} ${Math.abs(v).toFixed(2)} euros`;
   }
 
   /** Sens du prix pour le glyphe directionnel (règle daltonisme : jamais la teinte seule). */

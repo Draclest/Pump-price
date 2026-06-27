@@ -69,7 +69,40 @@ export interface Station {
   recommendation_label?: string;
   matched_fuel?:        FuelPrice;
   _route_info?:         RouteInfo;
+  // Net-gain engine (peuplé par /v2/net-gain/search)
+  net_gain_eur?:   number;
+  verdict?:        Verdict;
+  confidence?:     Confidence;
+  price_age_min?:  number;
+  detour?:         { km: number; min: number };
+  breakdown?:      NetGainBreakdown;
 }
+
+export type Verdict = 'worth_it' | 'neutral' | 'skip';
+export type Confidence = 'high' | 'medium' | 'low' | 'stale';
+
+export interface NetGainBreakdown {
+  pump_saving_eur: number;
+  detour_fuel_eur: number;
+  time_cost_eur:   number;
+}
+
+/** Carburants du moteur de gain net (codes API v2). */
+export type VehicleFuel = 'sp95_e10' | 'sp98' | 'gazole' | 'e85' | 'gplc';
+
+export interface VehicleProfile {
+  fuel:              VehicleFuel;
+  consumptionL100km: number;
+  tankCapacityL:     number;
+  currentLevelL?:    number | null;
+  /** true si des valeurs par défaut sont utilisées (badge « estimation »). */
+  isEstimate?:       boolean;
+}
+
+/** Correspondance bouton filtre (E10/SP98/…) ↔ carburant net-gain. */
+export const FILTER_TO_VEHICLE_FUEL: Record<string, VehicleFuel> = {
+  E10: 'sp95_e10', SP98: 'sp98', Gazole: 'gazole', E85: 'e85', GPLc: 'gplc',
+};
 
 export interface RecommendParams {
   lat:       number;
@@ -97,4 +130,4 @@ export interface FilterValues {
   services:  string[];
 }
 
-export type SortBy = 'score' | 'price' | 'distance' | 'freshness';
+export type SortBy = 'netgain' | 'score' | 'price' | 'distance' | 'freshness';

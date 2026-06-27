@@ -6,8 +6,10 @@ import { AddressSearchComponent } from './components/address-search/address-sear
 import { PriceHistoryComponent } from './components/price-history/price-history.component';
 import { RoutePanelComponent, RouteRequest } from './components/route-panel/route-panel.component';
 import { StationListComponent } from './components/station-list/station-list.component';
+import { VehicleProfileComponent } from './components/vehicle-profile/vehicle-profile.component';
 import { SortBarComponent } from './components/ui/sort-bar.component';
 import { IconComponent } from './components/ui/icon.component';
+import { VehicleProfile } from './models/station.model';
 import { AppStateService } from './services/app-state.service';
 import { IngestionStatusService } from './services/ingestion-status.service';
 import { FUEL_LABELS, FilterValues, SortBy } from './models/station.model';
@@ -20,6 +22,7 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
   imports: [
     MapComponent, FiltersComponent, AddressSearchComponent, PriceHistoryComponent,
     RoutePanelComponent, StationListComponent, SortBarComponent, IconComponent,
+    VehicleProfileComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./app.component.scss'],
@@ -48,6 +51,14 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
             <img class="brand-logo" src="assets/icon-maskable.svg" alt="pump-price" width="34" height="34" />
             <h1 class="brand-title">Pump Price</h1>
           </div>
+
+          <button class="btn-icon" type="button"
+                  [class.btn-icon--on]="state.vehicle.hasProfile()"
+                  title="Mon véhicule (gain net)" aria-label="Mon véhicule"
+                  (click)="vehicleOpen.set(true)">
+            <app-icon name="car" [size]="17" [strokeWidth]="2" />
+            @if (state.vehicle.isEstimate()) { <span class="estim-dot" aria-hidden="true"></span> }
+          </button>
 
           @if (!state.insecureContext) {
             <button class="btn-icon btn-icon--primary" type="button" [disabled]="state.locating()"
@@ -267,6 +278,11 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
             <span class="sheet-count">{{ countLabel() }}</span>
           }
           <button class="filters-pill-btn" type="button"
+                  [class.filters-pill-btn--on]="state.vehicle.hasProfile()"
+                  (click)="vehicleOpen.set(true)" aria-label="Mon véhicule">
+            <app-icon name="car" [size]="12" [strokeWidth]="2.2" /> Véhicule
+          </button>
+          <button class="filters-pill-btn" type="button"
                   [class.filters-pill-btn--on]="state.filters().fuelType !== 'Tous'"
                   (click)="filtersOpen.set(true)" aria-label="Filtres">
             <app-icon name="filter" [size]="12" [strokeWidth]="2.2" /> Filtres
@@ -379,6 +395,12 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
                          (close)="state.historyStation.set(null)"></app-price-history>
     }
 
+    @if (vehicleOpen()) {
+      <app-vehicle-profile [initial]="state.vehicle.profile()"
+                           (save)="onVehicleSave($event)" (clear)="onVehicleClear()"
+                           (close)="vehicleOpen.set(false)"></app-vehicle-profile>
+    }
+
     </div><!-- /app-wrapper -->
   `,
 })
@@ -389,6 +411,7 @@ export class AppComponent implements OnInit {
 
   readonly sheetSnap   = signal<Snap>(0);
   readonly filtersOpen = signal(false);
+  readonly vehicleOpen = signal(false);
 
   readonly hasResults = computed(() =>
     this.state.mode() === 'route'
@@ -408,6 +431,7 @@ export class AppComponent implements OnInit {
   });
 
   private readonly _sortTopLabels: Record<SortBy, { nearby: string; route: string }> = {
+    netgain:   { nearby: '⚡ Meilleur gain net',          route: '⚡ Meilleur gain sur le trajet' },
     score:     { nearby: '★ Top 3',                      route: '★ Top stations sur le trajet' },
     price:     { nearby: '€ Les moins chères',           route: '€ Moins chères sur le trajet' },
     distance:  { nearby: '📍 Les plus proches',          route: '📍 Moins de détour' },
@@ -485,6 +509,16 @@ export class AppComponent implements OnInit {
   onMobileFilters(f: FilterValues): void {
     this.state.onFiltersChanged(f);
     this.filtersOpen.set(false);
+  }
+
+  onVehicleSave(p: VehicleProfile): void {
+    this.state.setVehicle(p);
+    this.vehicleOpen.set(false);
+  }
+
+  onVehicleClear(): void {
+    this.state.setVehicle(null);
+    this.vehicleOpen.set(false);
   }
 
   formatRelativeTime(isoDate: string | null): string {

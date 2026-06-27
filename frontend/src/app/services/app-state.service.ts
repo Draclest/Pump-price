@@ -13,7 +13,9 @@ import { GeocodingService } from './geocoding.service';
 import { GeolocationService } from './geolocation.service';
 import { RoutingService, RouteGeometry } from './routing.service';
 import { StationService } from './station.service';
-import { FilterValues, SortBy, Station } from '../models/station.model';
+import { NetGainService } from './net-gain.service';
+import { VehicleProfileService } from './vehicle-profile.service';
+import { FilterValues, SortBy, Station, VehicleProfile } from '../models/station.model';
 import { RouteRequest } from '../components/route-panel/route-panel.component';
 
 export type AppMode = 'nearby' | 'route';
@@ -24,6 +26,8 @@ export class AppStateService {
   private readonly geoService       = inject(GeolocationService);
   private readonly routingService   = inject(RoutingService);
   private readonly geocodingService = inject(GeocodingService);
+  private readonly netGain          = inject(NetGainService);
+  readonly         vehicle          = inject(VehicleProfileService);
   private readonly destroyRef       = inject(DestroyRef);
 
   // ── Mode ──────────────────────────────────────────────────────────────
@@ -43,7 +47,7 @@ export class AppStateService {
   readonly error           = signal<string | null>(null);
   readonly hasSearched     = signal(false);
 
-  readonly sortBy = signal<SortBy>('score');
+  readonly sortBy = signal<SortBy>(this.vehicle.hasProfile() ? 'netgain' : 'score');
 
   private readonly _allStations = signal<Station[]>([]);
 
@@ -130,6 +134,24 @@ export class AppStateService {
     this.error.set(null);
     this.hasSearched.set(true);
 
+    // Profil véhicule présent → moteur de gain net ; sinon → score. Sur échec
+    // net-gain, repli silencieux sur le score (robustesse cold-start).
+    const vp = this.vehicle.profile();
+    if (vp) {
+      this.netGain.search('nearby', vp, { lat, lon }, null).subscribe({
+        next: res => {
+          this._allStations.set(res.results);
+          this.loading.set(false);
+          if (res.results.length > 0) this.sidebarOpen.set(true);
+        },
+        error: () => this._recommendScore(lat, lon),
+      });
+      return;
+    }
+    this._recommendScore(lat, lon);
+  }
+
+  private _recommendScore(lat: number, lon: number): void {
     const f = this.filters();
     this.stationService.recommendStations({
       lat,
@@ -175,6 +197,24 @@ export class AppStateService {
     if (loc) this.fetchStations(loc.lat, loc.lon);
   }
 
+  /** Enregistre (ou efface) le profil véhicule, bascule le tri et relance la recherche. */
+  setVehicle(p: VehicleProfile | null): void {
+    if (p) { this.vehicle.save(p); this.sortBy.set('netgain'); }
+    else   { this.vehicle.clear(); this.sortBy.set('score'); }
+
+    if (this.mode() === 'route') {
+      const o = this.routeOrigin(); const d = this.routeDest();
+      if (o && d) this.onRouteRequested({
+        origin: o.label, originLat: o.lat, originLon: o.lon,
+        destination: d.label, destLat: d.lat, destLon: d.lon,
+        maxDetourKm: this.routeMaxDetour(),
+      });
+    } else {
+      const loc = this.userLocation();
+      if (loc) this.fetchStations(loc.lat, loc.lon);
+    }
+  }
+
   onStationSelected(station: Station | null): void {
     this.selectedStation.set(station);
     if (station) this.sidebarOpen.set(false);
@@ -193,12 +233,38 @@ export class AppStateService {
     this.routeOrigin.set({ lat: req.originLat, lon: req.originLon, label: req.origin });
     this.routeDest.set({ lat: req.destLat, lon: req.destLon, label: req.destination });
 
+    // Profil véhicule → moteur de gain net (route) ; sinon → score. Repli sur le
+    // score si net-gain échoue.
+    const vp = this.vehicle.profile();
+    if (vp) {
+      this.netGain.search(
+        'route', vp,
+        { lat: req.originLat, lon: req.originLon },
+        { lat: req.destLat, lon: req.destLon },
+      ).subscribe({
+        next: res => {
+          if (res.route) {
+            this.routeData.set({ route: res.route, stations: res.results });
+            this.routeLoading.set(false);
+            this.sidebarOpen.set(true);
+          } else {
+            this._routeScore(req);
+          }
+        },
+        error: () => this._routeScore(req),
+      });
+      return;
+    }
+    this._routeScore(req);
+  }
+
+  private _routeScore(req: RouteRequest): void {
     const f = this.filters();
     this.routingService.getRouteRecommendations({
-      originLat:   req.originLat,
-      originLon:   req.originLon,
-      destLat:     req.destLat,
-      destLon:     req.destLon,
+      originLat:   req.originLat!,
+      originLon:   req.originLon!,
+      destLat:     req.destLat!,
+      destLon:     req.destLon!,
       fuelType:    f.fuelType !== 'Tous' ? f.fuelType : undefined,
       maxPrice:    f.maxPrice,
       maxDetourKm: req.maxDetourKm,
@@ -303,6 +369,9 @@ export class AppStateService {
     if (stations.length === 0) return stations;
     const sorted = [...stations];
     switch (sort) {
+      case 'netgain':
+        sorted.sort((a, b) => (b.net_gain_eur ?? -Infinity) - (a.net_gain_eur ?? -Infinity));
+        break;
       case 'price':
         sorted.sort((a, b) => (a.matched_fuel?.price ?? Infinity) - (b.matched_fuel?.price ?? Infinity));
         break;
