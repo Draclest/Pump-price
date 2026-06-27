@@ -41,6 +41,9 @@ class Candidate:
         services: list[str],
         price: float,
         price_age_min: float,
+        fuel_type: str = "",
+        updated_at: Optional[str] = None,
+        source: Optional[dict] = None,
     ):
         self.station_id = station_id
         self.brand = brand
@@ -50,6 +53,9 @@ class Candidate:
         self.services = services
         self.price = price
         self.price_age_min = price_age_min
+        self.fuel_type = fuel_type          # type ES du carburant matché (ex. "Gazole")
+        self.updated_at = updated_at         # timestamp ISO du prix matché
+        self.source = source or {}           # _source ES complet (pour rendu station)
 
 
 def es_types_for(fuel: Fuel) -> list[str]:
@@ -115,6 +121,9 @@ def _to_candidates(hits: list[dict]) -> list[Candidate]:
                 services=src.get("services") or [],
                 price=float(price),
                 price_age_min=_age_minutes(fsrc.get("updated_at")),
+                fuel_type=fsrc.get("type", ""),
+                updated_at=fsrc.get("updated_at"),
+                source=src,
             )
         )
     return out

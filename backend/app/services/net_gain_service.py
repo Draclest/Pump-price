@@ -18,6 +18,8 @@ from elasticsearch import AsyncElasticsearch
 
 from app.services import net_gain_repository as repo
 from app.services import osrm_client
+from app.services.routing_service import _haversine_km
+from app.services.station_service import _to_result
 from app.services.net_gain import (
     Confidence,
     Fuel,
@@ -133,10 +135,32 @@ async def search_net_gain(
                 ),
                 thresholds=(prefs.positive_threshold_eur, prefs.negative_threshold_eur),
             )
-            results.append({
+            # Station au format complet (réutilise _to_result) pour que le front
+            # rende exactement comme /recommend ; repli slim si pas de _source (tests).
+            if cand.source:
+                station = _to_result(cand.source).model_dump(mode="json")
+            else:
+                station = {
+                    "id": cand.station_id, "name": cand.name, "brand": cand.brand,
+                    "address": "", "city": "", "postal_code": "",
+                    "location": {"lat": cand.lat, "lon": cand.lon},
+                    "fuels": [], "services": cand.services,
+                }
+            station["id"] = cand.station_id
+            station["matched_fuel"] = {
+                "type": cand.fuel_type, "price": cand.price, "updated_at": cand.updated_at,
+            }
+            if mode == "route":
+                station["_route_info"] = {
+                    "perp_dist_km": round(detour_km / 2, 3), "detour_km": round(detour_km, 3),
+                    "nearest_idx": 0, "progress_pct": 0.0,
+                }
+            else:
+                station["distance_meters"] = round(
+                    _haversine_km(origin[0], origin[1], cand.lat, cand.lon) * 1000.0
+                )
+            station.update({
                 "station_id": cand.station_id,
-                "brand": cand.brand,
-                "location": {"lat": cand.lat, "lon": cand.lon},
                 "price": cand.price,
                 "price_age_min": round(cand.price_age_min, 1),
                 "confidence": conf,
@@ -150,6 +174,7 @@ async def search_net_gain(
                 },
                 "_conf_rank": {"high": 0, "medium": 1, "low": 2, "stale": 3}[conf],
             })
+            results.append(station)
 
     # Tri : gain net décroissant ; départage par confiance (fraîcheur).
     results.sort(key=lambda r: (-r["net_gain_eur"], r["_conf_rank"]))
