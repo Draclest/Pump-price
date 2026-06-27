@@ -9,6 +9,7 @@ interface IconDef { body: string; fill?: boolean; }
 
 const ICONS: Record<string, IconDef> = {
   locate:   { body: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>' },
+  locating: { body: '<path d="M12 17c-3-3.4-5.5-6-5.5-8.5a5.5 5.5 0 0 1 11 0c0 2.5-2.5 5.1-5.5 8.5z"/><circle cx="12" cy="8.5" r="1.8" fill="currentColor" stroke="none"/><ellipse class="locate-pulse" cx="12" cy="20" rx="6.5" ry="2.2" stroke-width="1.6" stroke-dasharray="2.5 2.5"/>' },
   pin:      { body: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>' },
   route:    { body: '<path d="M3 3h7l7 9-7 9H3l7-9z"/>' },
   search:   { body: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' },

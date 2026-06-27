@@ -52,7 +52,7 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
           @if (!state.insecureContext) {
             <button class="btn-icon btn-icon--primary" type="button" [disabled]="state.locating()"
                     title="Me localiser" aria-label="Me localiser" (click)="state.locateUser()">
-              <app-icon [name]="state.locating() ? 'spinner' : 'locate'" [size]="17" [spin]="state.locating()" />
+              <app-icon [name]="state.locating() ? 'locating' : 'locate'" [size]="17" />
             </button>
           } @else {
             <span class="https-badge" title="Géolocalisation indisponible en HTTP.">
@@ -197,7 +197,7 @@ type Snap = 0 | 1 | 2; // 0 collapsed (peek) · 1 mid · 2 full
         @if (!state.insecureContext && state.mode() === 'nearby') {
           <button class="map-fab" type="button" [disabled]="state.locating()"
                   aria-label="Me localiser" (click)="state.locateUser()">
-            <app-icon [name]="state.locating() ? 'spinner' : 'locate'" [size]="20" [spin]="state.locating()" />
+            <app-icon [name]="state.locating() ? 'locating' : 'locate'" [size]="20" />
           </button>
         }
 

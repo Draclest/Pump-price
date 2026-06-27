@@ -112,6 +112,10 @@ interface ScoreRow {
             <div class="price-hero"
                  [class.price-hero--good]="isPriceGood(station.matched_fuel.price)"
                  [class.price-hero--high]="isPriceHigh(station.matched_fuel.price)">
+              @if (priceDir(station.matched_fuel.price); as dir) {
+                <span class="price-dir" [class.price-dir--good]="dir === 'good'" [class.price-dir--high]="dir === 'high'"
+                      [attr.aria-label]="dir === 'good' ? 'moins cher' : 'plus cher'">{{ dir === 'good' ? '▼' : '▲' }}</span>
+              }
               <span class="price-amount">{{ station.matched_fuel.price.toFixed(3) }}</span>
               <span class="price-unit">€/L</span>
             </div>
@@ -261,6 +265,9 @@ interface ScoreRow {
     .price-unit { font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
     .price-hero--good .price-amount { color: var(--color-price-good); }
     .price-hero--high .price-amount { color: var(--color-price-high); }
+    .price-dir { font-size: 11px; line-height: 1; font-weight: 700; align-self: center; }
+    .price-dir--good { color: var(--color-price-good); }
+    .price-dir--high { color: var(--color-price-high); }
     .price-tag { font-size: 10px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
 
     /* ── Score badge ── */
@@ -421,6 +428,13 @@ export class StationCardComponent {
 
   highlightPrice(): number | null {
     return this.station.fuels.find(f => f.type === this.highlightFuel)?.price ?? null;
+  }
+
+  /** Sens du prix pour le glyphe directionnel (règle daltonisme : jamais la teinte seule). */
+  priceDir(price: number): 'good' | 'high' | null {
+    if (this.isPriceGood(price)) return 'good';
+    if (this.isPriceHigh(price)) return 'high';
+    return null;
   }
 
   isPriceGood(price: number): boolean {

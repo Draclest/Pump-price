@@ -211,6 +211,20 @@ html, body {
   .leaflet-top.leaflet-left { left: 428px; }
 }
 
+/* ─── Pulse « localisation en cours » (icône locating, Branding §3) ───────── */
+/* L'ellipse n'existe que pendant l'acquisition → animation directe, sans classe parente. */
+@media (prefers-reduced-motion: no-preference) {
+  .locate-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: locate-pulse 1.4s ease-in-out infinite;
+  }
+}
+@keyframes locate-pulse {
+  0%, 100% { opacity: .35; transform: scale(.8); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+
 /* ─── Map Markers v2 ─────────────────────────────────────────────────────── */
 .map-marker {
   background: var(--color-surface);
