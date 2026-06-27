@@ -90,12 +90,18 @@ export interface NetGainBreakdown {
 /** Carburants du moteur de gain net (codes API v2). */
 export type VehicleFuel = 'sp95_e10' | 'sp98' | 'gazole' | 'e85' | 'gplc';
 
+/** Catégorie de véhicule (V1) — sert à dériver conso + réservoir sans saisie chiffrée. */
+export type VehicleType =
+  | 'citadine' | 'compacte' | 'berline' | 'suv' | 'monospace' | 'utilitaire';
+
 export interface VehicleProfile {
   fuel:              VehicleFuel;
+  /** Catégorie choisie par l'utilisateur (source de l'estimation conso/réservoir). */
+  type?:             VehicleType;
   consumptionL100km: number;
   tankCapacityL:     number;
   currentLevelL?:    number | null;
-  /** true si des valeurs par défaut sont utilisées (badge « estimation »). */
+  /** true si conso/réservoir sont dérivés du type (badge « estimation »). */
   isEstimate?:       boolean;
 }
 

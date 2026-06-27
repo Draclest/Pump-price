@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { VehicleFuel, VehicleProfile } from '../../models/station.model';
-import { VehicleProfileService } from '../../services/vehicle-profile.service';
+import { VehicleFuel, VehicleProfile, VehicleType } from '../../models/station.model';
+import { VEHICLE_TYPES, VehicleProfileService } from '../../services/vehicle-profile.service';
 
 const FUELS: { value: VehicleFuel; label: string }[] = [
   { value: 'sp95_e10', label: 'Sans-plomb (E10/SP95)' },
@@ -30,39 +30,32 @@ const FUELS: { value: VehicleFuel; label: string }[] = [
           <span class="vp-title">Mon véhicule</span>
           <button class="vp-close" type="button" aria-label="Fermer" (click)="close.emit()">✕</button>
         </div>
-        <p class="vp-intro">Pour calculer ton <strong>gain net réel</strong> (carburant + détour), pas juste le prix affiché.</p>
+        <p class="vp-intro">Pour calculer ton <strong>gain net réel</strong> (carburant + détour), pas juste le prix affiché. Indique simplement ton type de véhicule.</p>
       </div>
 
       <div class="vp-body">
+        <label class="vp-label">Type de véhicule</label>
+        <div class="vp-chips">
+          @for (t of types; track t.value) {
+            <button type="button" class="vp-chip" [class.vp-chip--on]="selectedType === t.value"
+                    (click)="selectType(t.value)">{{ t.label }}</button>
+          }
+        </div>
+
         <label class="vp-label">Carburant</label>
         <div class="vp-chips">
           @for (f of fuels; track f.value) {
             <button type="button" class="vp-chip" [class.vp-chip--on]="form.fuel === f.value"
-                    (click)="form.fuel = f.value">{{ f.label }}</button>
+                    (click)="selectFuel(f.value)">{{ f.label }}</button>
           }
         </div>
 
-        <div class="vp-grid">
-          <div class="vp-field">
-            <label class="vp-label" for="vp-cons">Consommation (L/100km)</label>
-            <input id="vp-cons" type="number" class="vp-input" min="1" max="30" step="0.1"
-                   [(ngModel)]="form.consumptionL100km" />
-          </div>
-          <div class="vp-field">
-            <label class="vp-label" for="vp-tank">Réservoir (L)</label>
-            <input id="vp-tank" type="number" class="vp-input" min="20" max="120" step="1"
-                   [(ngModel)]="form.tankCapacityL" />
-          </div>
+        <div class="vp-estimate">
+          <span class="vp-estimate-label">Conso estimée</span>
+          <span class="vp-estimate-value">≈ {{ form.consumptionL100km }} L/100km</span>
         </div>
 
-        <div class="vp-field">
-          <label class="vp-label" for="vp-level">Niveau actuel (L) — optionnel</label>
-          <input id="vp-level" type="number" class="vp-input" min="0" max="120" step="1"
-                 placeholder="Plein complet calculé si vide"
-                 [ngModel]="form.currentLevelL" (ngModelChange)="form.currentLevelL = $event === '' ? null : $event" />
-        </div>
-
-        <p class="vp-hint">Astuce : laisse les valeurs par défaut si tu ne les connais pas — l'estimation reste utile.</p>
+        <p class="vp-hint">Estimation moyenne basée sur ta catégorie de véhicule — pas besoin de connaître ton réservoir ni tes litres restants.</p>
       </div>
 
       <div class="vp-actions">
@@ -100,10 +93,9 @@ const FUELS: { value: VehicleFuel; label: string }[] = [
     .vp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .vp-chip { padding: 7px 12px; border-radius: var(--radius-pill); border: 1.5px solid var(--color-border); background: var(--color-surface); font-size: var(--font-size-sm); font-weight: 600; font-family: var(--font-family); color: var(--color-text-secondary); cursor: pointer; }
     .vp-chip--on { background: var(--color-primary-light); border-color: var(--color-primary); color: var(--color-primary-dark); }
-    .vp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .vp-field { display: flex; flex-direction: column; gap: 6px; }
-    .vp-input { padding: 10px 12px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); font-size: var(--font-size-sm); font-family: var(--font-family); color: var(--color-text-primary); }
-    .vp-input:focus-visible { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-light); }
+    .vp-estimate { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: var(--radius-md); background: var(--color-primary-light); }
+    .vp-estimate-label { font-size: var(--font-size-xs); font-weight: 700; color: var(--color-primary-dark); text-transform: uppercase; letter-spacing: 0.5px; }
+    .vp-estimate-value { font-size: var(--font-size-md); font-weight: 800; color: var(--color-primary-dark); font-variant-numeric: tabular-nums; }
     .vp-hint { margin: 0; font-size: 11px; color: var(--color-text-muted); line-height: 1.4; }
     .vp-actions { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--color-border-subtle); flex-shrink: 0; }
     .vp-btn { flex: 1; padding: 12px; border-radius: var(--radius-md); border: none; font-size: var(--font-size-sm); font-weight: 700; font-family: var(--font-family); cursor: pointer; }
@@ -118,27 +110,33 @@ export class VehicleProfileComponent {
   @Output() readonly close = new EventEmitter<void>();
 
   readonly fuels = FUELS;
+  readonly types = VEHICLE_TYPES;
 
-  form: VehicleProfile = this.initial
-    ? { ...this.initial }
-    : VehicleProfileService.estimateFor('gazole');
+  selectedType: VehicleType = this.initial?.type ?? 'compacte';
+  form: VehicleProfile = this._initialForm();
 
   ngOnChanges(): void {
-    this.form = this.initial ? { ...this.initial } : VehicleProfileService.estimateFor('gazole');
+    this.selectedType = this.initial?.type ?? 'compacte';
+    this.form = this._initialForm();
+  }
+
+  selectType(type: VehicleType): void {
+    this.selectedType = type;
+    this.form = VehicleProfileService.estimateForType(type, this.form.fuel);
+  }
+
+  selectFuel(fuel: VehicleFuel): void {
+    this.form = VehicleProfileService.estimateForType(this.selectedType, fuel);
   }
 
   onSave(): void {
-    // Estimation tant que conso/réservoir restent les défauts d'origine.
-    const def = VehicleProfileService.estimateFor(this.form.fuel);
-    const isEstimate =
-      this.form.consumptionL100km === def.consumptionL100km &&
-      this.form.tankCapacityL === def.tankCapacityL;
-    this.save.emit({
-      fuel: this.form.fuel,
-      consumptionL100km: Number(this.form.consumptionL100km),
-      tankCapacityL: Number(this.form.tankCapacityL),
-      currentLevelL: this.form.currentLevelL != null ? Number(this.form.currentLevelL) : null,
-      isEstimate,
-    });
+    // V1 : conso/réservoir entièrement dérivés du type → toujours « estimation ».
+    this.save.emit(VehicleProfileService.estimateForType(this.selectedType, this.form.fuel));
+  }
+
+  private _initialForm(): VehicleProfile {
+    return this.initial
+      ? { ...this.initial }
+      : VehicleProfileService.estimateForType('compacte', 'gazole');
   }
 }
