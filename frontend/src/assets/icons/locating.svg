@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Localisation en cours">
+  <path d="M12 17c-3-3.4-5.5-6-5.5-8.5a5.5 5.5 0 0 1 11 0c0 2.5-2.5 5.1-5.5 8.5z"/>
+  <circle cx="12" cy="8.5" r="1.8" fill="currentColor" stroke="none"/>
+  <ellipse class="locate-pulse" cx="12" cy="20" rx="6.5" ry="2.2" stroke-width="1.6" stroke-dasharray="2.5 2.5"/>
+</svg>

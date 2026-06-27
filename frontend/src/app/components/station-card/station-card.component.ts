@@ -350,9 +350,9 @@ interface ScoreRow {
     .btn--primary {
       background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
       color: #fff;
-      box-shadow: 0 2px 8px rgba(2,132,199,.35);
+      box-shadow: 0 2px 8px rgba(22,163,74,.35);
     }
-    .btn--primary:hover { filter: brightness(1.06); box-shadow: 0 4px 16px rgba(2,132,199,.45); }
+    .btn--primary:hover { filter: brightness(1.06); box-shadow: 0 4px 16px rgba(22,163,74,.45); }
 
     .btn--ghost {
       background: var(--color-surface-3); color: var(--color-text-secondary);
@@ -457,9 +457,9 @@ export class StationCardComponent {
     const bd = this.station.score_breakdown;
     if (!bd) return [];
     const defs: { key: keyof ScoreBreakdown; label: string; color: string }[] = [
-      { key: 'price',     label: 'Prix',      color: '#059669' },
+      { key: 'price',     label: 'Prix',      color: '#16A34A' },
       { key: 'detour',    label: 'Détour',    color: '#D97706' },
-      { key: 'distance',  label: 'Distance',  color: '#0284C7' },
+      { key: 'distance',  label: 'Distance',  color: '#0EA5E9' },
       { key: 'freshness', label: 'Fraîcheur', color: '#7C3AED' },
       { key: 'services',  label: 'Services',  color: '#0891B2' },
     ];

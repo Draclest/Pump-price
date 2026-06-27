@@ -50,7 +50,7 @@ const SORT_OPTIONS: { value: SortBy; label: string; icon: string }[] = [
     .sort-btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-subtle); }
     .sort-btn--active {
       background: var(--color-primary); border-color: var(--color-primary); color: #fff;
-      box-shadow: 0 2px 8px rgba(2,132,199,0.25);
+      box-shadow: 0 2px 8px rgba(22,163,74,0.25);
     }
     .sort-btn-icon { font-size: 12px; }
   `],

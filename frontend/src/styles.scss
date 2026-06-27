@@ -3,62 +3,74 @@
 
 /* ─── Design Tokens v2 ───────────────────────────────────────────────────── */
 :root {
-  /* ── Brand ── */
-  --color-primary:         #0284C7;
-  --color-primary-dark:    #0369A1;
-  --color-primary-light:   #E0F2FE;
-  --color-primary-muted:   #BAE6FD;
-  --color-primary-subtle:  #F0F9FF;
+  /* ── Brand — Deal Green (économie / feu vert) ── */
+  --color-primary:         #16A34A;
+  --color-primary-dark:    #15803D;
+  --color-primary-light:   #DCFCE7;   /* tint pâle (fonds badges/chips) */
+  --color-primary-muted:   #BBF7D0;
+  --color-primary-subtle:  #F0FDF4;
 
-  --color-accent:          #D97706;
-  --color-accent-dark:     #B45309;
-  --color-accent-light:    #FEF3C7;
+  /* ── Accent — Fuel Amber (énergie / carburant) ── */
+  --color-accent:          #F59E0B;
+  --color-accent-dark:     #D97706;
+  --color-accent-light:    #FEF3C7;   /* tint pâle */
   --color-accent-subtle:   #FFFBEB;
 
-  /* ── Surfaces (4 niveaux) ── */
-  --color-bg:              #F0F9FF;
+  /* ── Surfaces (neutres slate froids) ── */
+  --color-bg:              #F8FAFC;
   --color-surface:         #FFFFFF;
   --color-surface-2:       #F8FAFC;
-  --color-surface-3:       #EFF6FF;
+  --color-surface-3:       #F1F5F9;
   --color-surface-raised:  #FFFFFF;
-  --color-border:          #BAE6FD;
-  --color-border-subtle:   #E0F2FE;
+  --color-border:          #E2E8F0;
+  --color-border-subtle:   #EEF2F7;
 
-  /* ── Texte ── */
+  /* ── Texte (encre + slate) ── */
   --color-text-primary:    #0F172A;
-  --color-text-secondary:  #334155;
+  --color-text-secondary:  #475569;
   --color-text-muted:      #64748B;
   --color-text-tertiary:   #94A3B8;
   --color-text-on-primary: #FFFFFF;
   --color-text-on-dark:    #FFFFFF;
 
-  /* ── Accent blue (liens, itinéraire) ── */
-  --color-accent-blue:         #0284C7;
-  --color-accent-blue-bg:      #E0F2FE;
-  --color-accent-blue-border:  #BAE6FD;
-  --color-accent-blue-text:    #0369A1;
+  /* ── Accent « action » (liens, itinéraire, chips actifs) → vert de marque ── */
+  --color-accent-blue:         #16A34A;
+  --color-accent-blue-bg:      #DCFCE7;
+  --color-accent-blue-border:  #BBF7D0;
+  --color-accent-blue-text:    #15803D;
 
   /* ── Sémantique ── */
-  --color-error:           #DC2626;
+  --color-error:           #EF4444;
   --color-error-bg:        #FEF2F2;
-  --color-warning:         #D97706;
+  --color-warning:         #F59E0B;
   --color-warning-bg:      #FFFBEB;
   --color-warning-border:  #FDE68A;
-  --color-success:         #059669;
+  --color-success:         #16A34A;
   --color-success-bg:      #ECFDF5;
 
-  /* ── Prix ── */
-  --color-price-good:      #059669;
-  --color-price-mid:       #D97706;
-  --color-price-high:      #DC2626;
+  /* ── Signal prix (donnée — bon plan ↔ cher) ── */
+  --color-price-good:      #16A34A;
+  --color-price-mid:       #F59E0B;
+  --color-price-high:      #EF4444;
   --color-price-good-bg:   #ECFDF5;
   --color-price-mid-bg:    #FFFBEB;
   --color-price-high-bg:   #FEF2F2;
 
-  /* ── Ombres (4 niveaux) ── */
-  --shadow-sm:     0 1px 3px rgba(2,132,199,0.07), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md:     0 4px 16px rgba(2,132,199,0.10), 0 2px 6px rgba(0,0,0,0.05);
-  --shadow-lg:     0 8px 32px rgba(2,132,199,0.12), 0 4px 12px rgba(0,0,0,0.06);
+  /* ── Alias Branding.md §6 (cohérence net-gain & nouveaux composants) ── */
+  --ink:        #0F172A;
+  --slate:      #475569;
+  --muted:      #94A3B8;
+  --border:     #E2E8F0;
+  --surface:    #FFFFFF;
+  --bg:         #F8FAFC;
+  --price-good: #16A34A;
+  --price-mid:  #F59E0B;
+  --price-high: #EF4444;
+
+  /* ── Ombres (teinte vert de marque) ── */
+  --shadow-sm:     0 1px 3px rgba(22,163,74,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:     0 4px 16px rgba(22,163,74,0.10), 0 2px 6px rgba(0,0,0,0.05);
+  --shadow-lg:     0 8px 32px rgba(22,163,74,0.12), 0 4px 12px rgba(0,0,0,0.06);
   --shadow-xl:     0 20px 60px rgba(0,0,0,0.14), 0 8px 20px rgba(0,0,0,0.08);
   --shadow-sheet:  0 -8px 40px rgba(0,0,0,0.13), 0 -2px 8px rgba(0,0,0,0.06);
 
@@ -95,12 +107,13 @@
 /* ─── Dark mode ──────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg:              #0C1422;
-    --color-surface:         #162030;
-    --color-surface-2:       #1C2A3E;
-    --color-surface-3:       #243550;
-    --color-surface-raised:  #1C2A3E;
-    --color-border:          rgba(2,132,199,0.20);
+    /* Dark prioritaire (usage voiture/nuit) : vert ravivé, pas recopié. */
+    --color-bg:              #0B1120;
+    --color-surface:         #111827;
+    --color-surface-2:       #162033;
+    --color-surface-3:       #1E2A3C;
+    --color-surface-raised:  #162033;
+    --color-border:          #1E293B;
     --color-border-subtle:   rgba(255,255,255,0.06);
 
     --color-text-primary:    #F1F5F9;
@@ -108,16 +121,38 @@
     --color-text-muted:      #64748B;
     --color-text-tertiary:   #475569;
 
-    --color-primary-subtle:  #0C1E30;
-    --color-primary-light:   rgba(2,132,199,0.18);
-    --color-primary-muted:   rgba(2,132,199,0.30);
+    /* Marque ravivée */
+    --color-primary:         #22C55E;
+    --color-primary-dark:    #16A34A;
+    --color-primary-subtle:  #0C2117;
+    --color-primary-light:   rgba(34,197,94,0.18);
+    --color-primary-muted:   rgba(34,197,94,0.30);
+    --color-accent:          #FBBF24;
+    --color-accent-dark:     #D97706;
     --color-accent-subtle:   #1C1608;
-    --color-accent-light:    rgba(217,119,6,0.18);
+    --color-accent-light:    rgba(251,191,36,0.18);
 
-    --color-surface-3:       #1E2A3C;
+    /* Action / itinéraire (vert) */
+    --color-accent-blue:         #22C55E;
+    --color-accent-blue-bg:      rgba(34,197,94,0.18);
+    --color-accent-blue-border:  rgba(34,197,94,0.30);
+    --color-accent-blue-text:    #4ADE80;
+
+    /* Signal prix + sémantique (dark) */
+    --color-price-good:      #22C55E;
+    --color-price-mid:       #FBBF24;
+    --color-price-high:      #F87171;
+    --color-success:         #22C55E;
+    --color-error:           #F87171;
+    --color-warning:         #FBBF24;
     --color-success-bg:      #052E16;
     --color-error-bg:        #1F0909;
     --color-warning-bg:      #1C1204;
+
+    /* Alias Branding.md */
+    --ink: #F1F5F9; --slate: #94A3B8; --muted: #64748B;
+    --border: #1E293B; --surface: #111827; --bg: #0B1120;
+    --price-good: #22C55E; --price-mid: #FBBF24; --price-high: #F87171;
 
     --shadow-sm:     0 1px 3px rgba(0,0,0,0.40);
     --shadow-md:     0 4px 16px rgba(0,0,0,0.50);
