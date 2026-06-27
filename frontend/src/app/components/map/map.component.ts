@@ -107,6 +107,26 @@ import { safeBrandColor } from '../../utils/brand.utils';
           }
         </div>
 
+        <!-- Gain net + breakdown (crédibilité : le chiffre est démontrable) -->
+        @if (selectedStation.net_gain_eur != null) {
+          <div class="panel-netgain"
+               [class.panel-netgain--worth]="selectedStation.verdict === 'worth_it'"
+               [class.panel-netgain--neutral]="selectedStation.verdict === 'neutral'"
+               [class.panel-netgain--skip]="selectedStation.verdict === 'skip'">
+            <div class="ng-head">
+              <span class="ng-verdict">{{ verdictLabel(selectedStation.verdict) }}</span>
+              <span class="ng-net">{{ signedEur(selectedStation.net_gain_eur) }}</span>
+            </div>
+            @if (selectedStation.breakdown; as bd) {
+              <div class="ng-break">
+                <span>Économie pompe <b>{{ signedEur(bd.pump_saving_eur) }}</b></span>
+                <span>− Carburant détour <b>{{ bd.detour_fuel_eur.toFixed(2) }}&nbsp;€</b></span>
+                <span>− Temps <b>{{ bd.time_cost_eur.toFixed(2) }}&nbsp;€</b></span>
+              </div>
+            }
+          </div>
+        }
+
         <!-- Fuel prices -->
         <div class="panel-fuels">
           @for (f of selectedStation.fuels; track f.type) {
@@ -262,6 +282,20 @@ import { safeBrandColor } from '../../utils/brand.utils';
     .panel-stat-value--warn { color: var(--color-warning); }
     .panel-stat-label { font-size: 10px; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
 
+    /* ── Gain net + breakdown ── */
+    .panel-netgain { margin-bottom: var(--space-3); border-radius: var(--radius-md); padding: 10px 12px; }
+    .panel-netgain--worth   { background: var(--color-price-good-bg); }
+    .panel-netgain--neutral { background: var(--color-price-mid-bg); }
+    .panel-netgain--skip    { background: var(--color-price-high-bg); }
+    .ng-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .ng-verdict { font-size: var(--font-size-sm); font-weight: 800; }
+    .panel-netgain--worth   .ng-verdict, .panel-netgain--worth   .ng-net { color: var(--color-price-good); }
+    .panel-netgain--neutral .ng-verdict, .panel-netgain--neutral .ng-net { color: var(--color-price-mid); }
+    .panel-netgain--skip    .ng-verdict, .panel-netgain--skip    .ng-net { color: var(--color-price-high); }
+    .ng-net { font-size: var(--font-size-lg); font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+    .ng-break { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 11px; color: var(--color-text-secondary); }
+    .ng-break b { color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+
     .panel-score {
       width: 34px; height: 34px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
@@ -384,6 +418,16 @@ export class MapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   formatDistance(meters: number): string {
     return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
+  }
+
+  signedEur(v: number): string {
+    return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + ' €';
+  }
+
+  verdictLabel(verdict?: string): string {
+    return verdict === 'worth_it' ? '✓ Vaut le détour'
+         : verdict === 'skip'     ? '✕ N\'y va pas'
+         : '— Neutre';
   }
 
   formatFuelDate(iso: string): string {
